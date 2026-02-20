@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ua">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Дошка повідомлень групи</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Дошка оголошень групи (Варіант: 4)</h1>
+        </header>
+
+        <main>
+            <div class="main-layout">
+                <section id="create-section">
+                    <h2 id="formTitle">Написати оголошення</h2>
+                    <form id="messageForm" novalidate>
+                        <input type="hidden" id="editId">
+
+                        <div class="field">
+                            <label for="authorInput">Автор</label>
+                            <input id="authorInput" type="text" placeholder="Іванов Іван" required minlength="3" maxlength="50">
+                            <p id="authorError" class="error-text" ></p>
+                        </div>
+
+                        <div class="field">
+                            <label for="categorySelect">Категорія</label>
+                            <select id="categorySelect" required>
+                                <option value="">Оберіть категорію</option>
+                                <option value="Оголошення">Оголошення</option>
+                                <option value="Навчання">Навчання</option>
+                                <option value="Дозвілля">Дозвілля</option>
+                            </select>
+                            <p class="error-text" id="categoryError"></p>
+                        </div>
+
+                        <div class="field">
+                            <label for="textInput">Текст</label>
+                            <textarea id="textInput" rows="4" required></textarea>
+                            <p class="error-text" id="textError"></p>
+                        </div>
+
+                        <div class="buttons">
+                            <button type="submit" id="submitBtn">Опублікувати</button>
+                            <button type="button" id="resetBtn">Очистити</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section id="list-section">
+                    <h2>Всі оголошення</h2>
+                    <table id="messageTable">
+                        <thead>
+                            <tr>
+                                <th>Автор</th>
+                                <th>Категорія</th>
+                                <th>Текст</th>
+                                <th>Дата</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messageTableBody"></tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
