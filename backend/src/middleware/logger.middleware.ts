@@ -1,18 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-
+import { NextFunction, Request, Response } from 'express';
 export class LoggerMiddleware {
   static log(req: Request, res: Response, next: NextFunction): void {
-    const start = Date.now();
-    const originalSend = res.send;
-
-    res.send = function (data: any): Response {
-      const duration = Date.now() - start;
-      console.log(
-        `[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`
-      );
-      return originalSend.call(this, data);
-    };
-
+    const started = Date.now();
+    res.on('finish', () => console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${Date.now() - started}ms)`));
     next();
   }
 }

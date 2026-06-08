@@ -1,55 +1,42 @@
-import { v4 as uuidv4 } from 'uuid';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-}
+import { dbAll, dbGet, dbRun } from '../db/db';
+import { pickSort, sqlNumber, sqlOrder, sqlText } from '../db/sql';
+import { UserRow } from '../dtos/users.dto';
 
 export class UsersRepository {
-  private users: User[] = [];
-
-  create(name: string, email: string): User {
-    const user: User = {
-      id: uuidv4(),
-      name,
-      email,
-      createdAt: new Date(),
-    };
-    this.users.push(user);
+  async create(name: string, email: string): Promise<UserRow> {
+    const result = await dbRun(`INSERT INTO users (name, email) VALUES (${sqlText(name)}, ${sqlText(email)});`);
+    const user = await this.findById(result.lastID);
+    if (!user) throw new Error('Failed to create user');
     return user;
   }
-
-  findAll(): User[] {
-    return [...this.users];
+  async findAll(sortBy: string = 'id', order: string = 'ASC', limit: number = 50): Promise<UserRow[]> {
+    const sortField = pickSort(sortBy, ['id', 'name', 'email', 'createdAt']);
+    const sortOrder = sqlOrder(order);
+    return dbAll<UserRow>(`SELECT id, name, email, createdAt FROM users ORDER BY ${sortField} ${sortOrder} LIMIT ${limit};`);
   }
-
-  findById(id: string): User | null {
-    return this.users.find((u) => u.id === id) || null;
+  async findById(id: unknown): Promise<UserRow | null> {
+    const userId = sqlNumber(id, 'user id');
+    const user = await dbGet<UserRow>(`SELECT id, name, email, createdAt FROM users WHERE id = ${userId};`);
+    return user || null;
   }
-
-  update(id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>): User | null {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) return null;
-
-    Object.assign(user, updates);
-    return user;
+  async findByEmail(email: string): Promise<UserRow | null> {
+    const user = await dbGet<UserRow>(`SELECT id, name, email, createdAt FROM users WHERE email = ${sqlText(email)};`);
+    return user || null;
   }
-
-  delete(id: string): boolean {
-    const index = this.users.findIndex((u) => u.id === id);
-    if (index === -1) return false;
-
-    this.users.splice(index, 1);
-    return true;
+  async update(id: unknown, updates: Partial<{ name: string; email: string }>): Promise<UserRow | null> {
+    const userId = sqlNumber(id, 'user id');
+    const current = await this.findById(userId);
+    if (!current) return null;
+    const fields: string[] = [];
+    if (updates.name !== undefined) fields.push(`name = ${sqlText(updates.name)}`);
+    if (updates.email !== undefined) fields.push(`email = ${sqlText(updates.email)}`);
+    if (fields.length === 0) return current;
+    await dbRun(`UPDATE users SET ${fields.join(', ')} WHERE id = ${userId};`);
+    return this.findById(userId);
   }
-
-  loadFromStorage(data: User[]): void {
-    this.users = data;
-  }
-
-  getAll(): User[] {
-    return this.users;
+  async delete(id: unknown): Promise<boolean> {
+    const userId = sqlNumber(id, 'user id');
+    const result = await dbRun(`DELETE FROM users WHERE id = ${userId};`);
+    return result.changes > 0;
   }
 }

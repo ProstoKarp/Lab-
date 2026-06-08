@@ -3,8 +3,8 @@
     "target": "ES2020",
     "module": "ES2020",
     "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "backend/src",
+    "outDir": "Backend",
+    "rootDir": "Backend/src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,6 +21,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["backend/src/**/*"],
+  "include": ["Backend/src/**/*"],
   "exclude": ["node_modules"]
 }

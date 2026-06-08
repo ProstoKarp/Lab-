@@ -1,63 +1,81 @@
-import { v4 as uuidv4 } from 'uuid';
+import { dbAll, dbGet, dbRun } from '../db/db';
+import { pickSort, sqlLimit, sqlNumber, sqlOrder, sqlText } from '../db/sql';
+import { RegistrationRow } from '../dtos/registrations.dto';
 
-interface Registration {
-  id: string;
-  eventId: string;
-  userId: string;
-  registeredAt: Date;
-}
+type RegistrationFilters = { user_id?: unknown; event_id?: unknown; status?: string; sort?: string; order?: string; limit?: unknown };
 
 export class RegistrationsRepository {
-  private registrations: Registration[] = [];
-
-  create(eventId: string, userId: string): Registration {
-    const registration: Registration = {
-      id: uuidv4(),
-      eventId,
-      userId,
-      registeredAt: new Date(),
-    };
-    this.registrations.push(registration);
+  async create(user_id: unknown, event_id: unknown, status = 'registered'): Promise<RegistrationRow> {
+    const userId = sqlNumber(user_id, 'user_id');
+    const eventId = sqlNumber(event_id, 'event_id');
+    const result = await dbRun(`INSERT INTO registrations (user_id, event_id, status)
+      VALUES (${userId}, ${eventId}, ${sqlText(status)});`);
+    const registration = await this.findById(result.lastID);
+    if (!registration) throw new Error('Failed to create registration');
     return registration;
   }
-
-  findAll(): Registration[] {
-    return [...this.registrations];
+  async findAll(filters: RegistrationFilters = {}): Promise<RegistrationRow[]> {
+    const sortField = pickSort(filters.sort || 'createdAt', ['id', 'user_id', 'event_id', 'status', 'createdAt'], 'createdAt');
+    const sortOrder = sqlOrder(filters.order || 'DESC');
+    const limit = sqlLimit(filters.limit, 50);
+    const where: string[] = [];
+    if (filters.user_id) where.push(`user_id = ${sqlNumber(filters.user_id, 'user_id')}`);
+    if (filters.event_id) where.push(`event_id = ${sqlNumber(filters.event_id, 'event_id')}`);
+    if (filters.status) where.push(`status = ${sqlText(filters.status)}`);
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    return dbAll<RegistrationRow>(`SELECT id, user_id, event_id, status, createdAt FROM registrations ${whereSql}
+      ORDER BY ${sortField} ${sortOrder} LIMIT ${limit};`);
   }
-
-  findById(id: string): Registration | null {
-    return this.registrations.find((r) => r.id === id) || null;
+  async findById(id: unknown): Promise<RegistrationRow | null> {
+    const regId = sqlNumber(id, 'registration id');
+    const registration = await dbGet<RegistrationRow>(`SELECT id, user_id, event_id, status, createdAt FROM registrations WHERE id = ${regId};`);
+    return registration || null;
   }
-
-  findByEventId(eventId: string): Registration[] {
-    return this.registrations.filter((r) => r.eventId === eventId);
+  async findByEventAndUser(event_id: unknown, user_id: unknown): Promise<RegistrationRow | null> {
+    const eventId = sqlNumber(event_id, 'event_id');
+    const userId = sqlNumber(user_id, 'user_id');
+    const registration = await dbGet<RegistrationRow>(`SELECT id, user_id, event_id, status, createdAt FROM registrations
+      WHERE event_id = ${eventId} AND user_id = ${userId};`);
+    return registration || null;
   }
-
-  findByUserId(userId: string): Registration[] {
-    return this.registrations.filter((r) => r.userId === userId);
+  async updateStatus(id: unknown, status: string): Promise<RegistrationRow | null> {
+    const regId = sqlNumber(id, 'registration id');
+    const current = await this.findById(regId);
+    if (!current) return null;
+    await dbRun(`UPDATE registrations SET status = ${sqlText(status)} WHERE id = ${regId};`);
+    return this.findById(regId);
   }
-
-  findByEventAndUser(eventId: string, userId: string): Registration | null {
-    return (
-      this.registrations.find(
-        (r) => r.eventId === eventId && r.userId === userId
-      ) || null
-    );
+  async delete(id: unknown): Promise<boolean> {
+    const regId = sqlNumber(id, 'registration id');
+    const result = await dbRun(`DELETE FROM registrations WHERE id = ${regId};`);
+    return result.changes > 0;
   }
-
-  delete(id: string): boolean {
-    const index = this.registrations.findIndex((r) => r.id === id);
-    if (index === -1) return false;
-
-    this.registrations.splice(index, 1);
-    return true;
+  async findAllWithDetails(filters: RegistrationFilters = {}): Promise<any[]> {
+    const sortField = pickSort(filters.sort || 'createdAt', ['id', 'createdAt', 'status', 'event_title', 'user_name'], 'createdAt');
+    const sortOrder = sqlOrder(filters.order || 'DESC');
+    const limit = sqlLimit(filters.limit, 50);
+    const where: string[] = [];
+    if (filters.status) where.push(`r.status = ${sqlText(filters.status)}`);
+    if (filters.user_id) where.push(`r.user_id = ${sqlNumber(filters.user_id, 'user_id')}`);
+    if (filters.event_id) where.push(`r.event_id = ${sqlNumber(filters.event_id, 'event_id')}`);
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const sortSql = sortField === 'event_title' ? 'e.title' : sortField === 'user_name' ? 'u.name' : `r.${sortField}`;
+    return dbAll(`SELECT r.id, r.user_id, r.event_id, r.status, r.createdAt,
+      u.name AS user_name, u.email AS user_email, e.title AS event_title, e.category AS event_category
+      FROM registrations r
+      JOIN users u ON r.user_id = u.id
+      JOIN events e ON r.event_id = e.id
+      ${whereSql} ORDER BY ${sortSql} ${sortOrder} LIMIT ${limit};`);
   }
-
-  loadFromStorage(data: Registration[]): void {
-    this.registrations = data;
-  }
-
-  getAll(): Registration[] {
-    return this.registrations;
+  async getRegistrationStats(): Promise<any[]> {
+    return dbAll(`SELECT e.id AS event_id, e.title AS event_title, e.category,
+      COUNT(r.id) AS total_registrations,
+      SUM(CASE WHEN r.status = 'registered' THEN 1 ELSE 0 END) AS registered,
+      SUM(CASE WHEN r.status = 'attended' THEN 1 ELSE 0 END) AS attended,
+      SUM(CASE WHEN r.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+      FROM events e
+      LEFT JOIN registrations r ON r.event_id = e.id
+      GROUP BY e.id, e.title, e.category
+      ORDER BY total_registrations DESC, e.id ASC;`);
   }
 }

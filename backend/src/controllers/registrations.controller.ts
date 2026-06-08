@@ -1,66 +1,36 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { RegistrationsService } from '../services/registrations.service';
-import { CreateRegistrationDto } from '../dtos/registrations.dto';
 
 export class RegistrationsController {
   constructor(private registrationsService: RegistrationsService) {}
-
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const dto: CreateRegistrationDto = req.body;
-      const registration = this.registrationsService.registerUserForEvent(dto);
-      res.status(201).json(registration);
-    } catch (error) {
-      next(error);
-    }
+    try { res.status(201).json({ data: await this.registrationsService.registerUserForEvent(req.body) }); } catch (e) { next(e); }
   }
-
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const registrations = this.registrationsService.getAllRegistrations();
-      res.status(200).json(registrations);
-    } catch (error) {
-      next(error);
-    }
+      const registrations = await this.registrationsService.getAllRegistrations(req.query);
+      res.json({ data: registrations, meta: { count: registrations.length } });
+    } catch (e) { next(e); }
   }
-
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const registration = this.registrationsService.getRegistrationById(id);
-      res.status(200).json(registration);
-    } catch (error) {
-      next(error);
-    }
+    try { res.json({ data: await this.registrationsService.getRegistrationById(req.params.id) }); } catch (e) { next(e); }
   }
-
-  async getByEventId(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { eventId } = req.params;
-      const registrations = this.registrationsService.getRegistrationsByEventId(eventId);
-      res.status(200).json(registrations);
-    } catch (error) {
-      next(error);
-    }
+  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try { res.json({ data: await this.registrationsService.updateRegistration(req.params.id, req.body) }); } catch (e) { next(e); }
   }
-
-  async getByUserId(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { userId } = req.params;
-      const registrations = this.registrationsService.getRegistrationsByUserId(userId);
-      res.status(200).json(registrations);
-    } catch (error) {
-      next(error);
-    }
-  }
-
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try { await this.registrationsService.deleteRegistration(req.params.id); res.status(204).send(); } catch (e) { next(e); }
+  }
+  async getAllWithDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
-      this.registrationsService.deleteRegistration(id);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
+      const registrations = await this.registrationsService.getAllRegistrationsWithDetails(req.query);
+      res.json({ data: registrations, meta: { count: registrations.length } });
+    } catch (e) { next(e); }
+  }
+  async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stats = await this.registrationsService.getRegistrationStats();
+      res.json({ data: stats, meta: { count: stats.length } });
+    } catch (e) { next(e); }
   }
 }

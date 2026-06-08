@@ -1,0 +1,19 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const registrations_controller_1 = require("../controllers/registrations.controller");
+const events_repository_1 = require("../repositories/events.repository");
+const registrations_repository_1 = require("../repositories/registrations.repository");
+const users_repository_1 = require("../repositories/users.repository");
+const registrations_service_1 = require("../services/registrations.service");
+const router = (0, express_1.Router)();
+const controller = new registrations_controller_1.RegistrationsController(new registrations_service_1.RegistrationsService(new registrations_repository_1.RegistrationsRepository(), new events_repository_1.EventsRepository(), new users_repository_1.UsersRepository()));
+router.post('/', (req, res, next) => controller.register(req, res, next));
+router.get('/stats/per-event', (req, res, next) => controller.getStats(req, res, next));
+router.get('/details/all', (req, res, next) => controller.getAllWithDetails(req, res, next));
+router.get('/', (req, res, next) => controller.getAll(req, res, next));
+router.get('/:id', (req, res, next) => controller.getById(req, res, next));
+router.put('/:id', (req, res, next) => controller.update(req, res, next));
+router.delete('/:id', (req, res, next) => controller.delete(req, res, next));
+exports.default = router;
+//# sourceMappingURL=registrations.routes.js.map

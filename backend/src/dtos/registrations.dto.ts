@@ -1,11 +1,4 @@
-export interface CreateRegistrationDto {
-  eventId: string;
-  userId: string;
-}
-
-export interface RegistrationResponseDto {
-  id: string;
-  eventId: string;
-  userId: string;
-  registeredAt: Date;
-}
+export type RegistrationStatus = 'registered' | 'attended' | 'cancelled';
+export type RegistrationRow = { id: number; user_id: number; event_id: number; status: RegistrationStatus; createdAt: string };
+export type CreateRegistrationDto = { user_id: number; event_id: number; status?: RegistrationStatus };
+export type UpdateRegistrationDto = { status?: RegistrationStatus };

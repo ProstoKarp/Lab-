@@ -1,112 +1,62 @@
-import { EventsRepository } from '../repositories/events.repository';
-import { CreateEventDto, UpdateEventDto, EventResponseDto } from '../dtos/events.dto';
 import { ApiError } from '../errors/ApiError';
+import { EventsRepository } from '../repositories/events.repository';
+import { UsersRepository } from '../repositories/users.repository';
+import { CreateEventDto, EventCategory, EventRow, UpdateEventDto } from '../dtos/events.dto';
+
+const categories: EventCategory[] = ['announcement', 'meeting', 'workshop', 'conference'];
 
 export class EventsService {
-  constructor(private eventsRepository: EventsRepository) {}
-
-  createEvent(dto: CreateEventDto): EventResponseDto {
-    if (!dto.author || dto.author.trim().length < 3) {
-      throw ApiError.badRequest('Author name must be at least 3 characters long');
-    }
-
-    if (!dto.category) {
-      throw ApiError.badRequest('Category is required');
-    }
-
-    if (!dto.description || dto.description.trim().length === 0) {
-      throw ApiError.badRequest('Event description cannot be empty');
-    }
-
-    if (!dto.title || dto.title.trim().length === 0) {
-      throw ApiError.badRequest('Event title cannot be empty');
-    }
-
-    const event = this.eventsRepository.create(
-      dto.title,
-      dto.description,
-      dto.category,
-      dto.author
-    );
-
-    return this.mapToResponse(event);
+  constructor(private eventsRepository: EventsRepository, private usersRepository: UsersRepository) {}
+  async createEvent(dto: CreateEventDto): Promise<EventRow> {
+    this.validateEvent(dto);
+    const author = await this.usersRepository.findById(dto.author_id);
+    if (!author) throw ApiError.badRequest('Author user not found');
+    return this.eventsRepository.create(dto.title.trim().slice(0, 120), dto.description.trim(), dto.category, dto.author_id);
   }
-
-  getAllEvents(): EventResponseDto[] {
-    const events = this.eventsRepository.findAll();
-    return events.map((e) => this.mapToResponse(e));
+  async getAllEvents(query: any): Promise<EventRow[]> {
+    return this.eventsRepository.findAll(query);
   }
-
-  getEventById(id: string): EventResponseDto {
-    const event = this.eventsRepository.findById(id);
-    if (!event) {
-      throw ApiError.notFound('Event not found');
-    }
-    return this.mapToResponse(event);
+  async getEventById(id: unknown): Promise<EventRow> {
+    const event = await this.eventsRepository.findById(id);
+    if (!event) throw ApiError.notFound('Event not found');
+    return event;
   }
-
-  updateEvent(id: string, dto: UpdateEventDto): EventResponseDto {
-    const event = this.eventsRepository.findById(id);
-    if (!event) {
-      throw ApiError.notFound('Event not found');
+  async getEventsWithAuthors(query: any): Promise<any[]> {
+    return this.eventsRepository.findWithAuthor(query);
+  }
+  async unsafeSearch(q: unknown): Promise<EventRow[]> {
+    if (typeof q !== 'string') throw ApiError.badRequest('q is required');
+    return this.eventsRepository.unsafeSearch(q);
+  }
+  async updateEvent(id: unknown, dto: UpdateEventDto): Promise<EventRow> {
+    await this.getEventById(id);
+    const updates: UpdateEventDto = {};
+    if (dto.title !== undefined) {
+      if (typeof dto.title !== 'string' || dto.title.trim().length < 5) throw ApiError.badRequest('Event title must be at least 5 characters long');
+      updates.title = dto.title.trim().slice(0, 120);
     }
-
-    const updates: Partial<any> = {};
-
-    if (dto.author !== undefined) {
-      if (dto.author.trim().length < 3) {
-        throw ApiError.badRequest('Author name must be at least 3 characters long');
-      }
-      updates.author = dto.author;
+    if (dto.description !== undefined) {
+      if (typeof dto.description !== 'string' || dto.description.trim().length < 1) throw ApiError.badRequest('Event description cannot be empty');
+      updates.description = dto.description.trim();
     }
-
     if (dto.category !== undefined) {
+      if (!categories.includes(dto.category)) throw ApiError.badRequest(`Category must be one of: ${categories.join(', ')}`);
       updates.category = dto.category;
     }
-
-    if (dto.description !== undefined) {
-      if (dto.description.trim().length === 0) {
-        throw ApiError.badRequest('Event description cannot be empty');
-      }
-      updates.description = dto.description;
-    }
-
-    if (dto.title !== undefined) {
-      if (dto.title.trim().length === 0) {
-        throw ApiError.badRequest('Event title cannot be empty');
-      }
-      updates.title = dto.title;
-    }
-
-    const updatedEvent = this.eventsRepository.update(id, updates);
-    if (!updatedEvent) {
-      throw ApiError.internal('Failed to update event');
-    }
-
-    return this.mapToResponse(updatedEvent);
+    const updated = await this.eventsRepository.update(id, updates);
+    if (!updated) throw ApiError.notFound('Event not found');
+    return updated;
   }
-
-  deleteEvent(id: string): void {
-    const event = this.eventsRepository.findById(id);
-    if (!event) {
-      throw ApiError.notFound('Event not found');
-    }
-
-    const deleted = this.eventsRepository.delete(id);
-    if (!deleted) {
-      throw ApiError.internal('Failed to delete event');
-    }
+  async deleteEvent(id: unknown): Promise<void> {
+    await this.getEventById(id);
+    const ok = await this.eventsRepository.delete(id);
+    if (!ok) throw ApiError.notFound('Event not found');
   }
-
-  private mapToResponse(event: any): EventResponseDto {
-    return {
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      category: event.category,
-      author: event.author,
-      createdAt: event.createdAt,
-      updatedAt: event.updatedAt,
-    };
+  private validateEvent(dto: CreateEventDto): void {
+    if (!dto || typeof dto !== 'object') throw ApiError.badRequest('Request body is required');
+    if (typeof dto.title !== 'string' || dto.title.trim().length < 5) throw ApiError.badRequest('Event title must be at least 5 characters long');
+    if (typeof dto.description !== 'string' || dto.description.trim().length < 1) throw ApiError.badRequest('Event description cannot be empty');
+    if (!categories.includes(dto.category)) throw ApiError.badRequest(`Category must be one of: ${categories.join(', ')}`);
+    if (!Number.isInteger(Number(dto.author_id)) || Number(dto.author_id) <= 0) throw ApiError.badRequest('author_id must be a positive integer');
   }
 }

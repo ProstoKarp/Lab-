@@ -1,16 +1,3 @@
-export interface CreateUserDto {
-  name: string;
-  email: string;
-}
-
-export interface UpdateUserDto {
-  name?: string;
-  email?: string;
-}
-
-export interface UserResponseDto {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: Date;
-}
+export type UserRow = { id: number; name: string; email: string; createdAt: string };
+export type CreateUserDto = { name: string; email: string };
+export type UpdateUserDto = Partial<CreateUserDto>;

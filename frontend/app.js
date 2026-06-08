@@ -1,334 +1,379 @@
 
-/**
- * Event Board Application
- * Client-side application for managing events and announcements
- * Migrated from vanilla JavaScript to modern ES6+ with TypeScript-like structure
- */
+const API_URL = "http://localhost:3000/api";
 
-class EventBoard {
-    constructor() {
-        // DOM Elements
-        this.messageForm = document.getElementById('messageForm');
-        this.tableBody = document.getElementById('messageTableBody');
-        this.editIdInput = document.getElementById('editId');
-        this.submitBtn = document.getElementById('submitBtn');
-        this.formTitle = document.getElementById('formTitle');
-        this.authorInput = document.getElementById('authorInput');
-        this.categorySelect = document.getElementById('categorySelect');
-        this.textInput = document.getElementById('textInput');
-        this.resetBtn = document.getElementById('resetBtn');
+const state = {
+    events: [],
+    editingId: null,
+    sortBy: "date",      
+    sortDirection: "asc" 
+};
 
-        // State
-        this.events = [];
-        this.editingId = null;
-        this.API_URL = 'http://localhost:3000/api';
+const form = document.getElementById("messageForm");
+const tableBody = document.getElementById("messageTableBody");
+const formTitle = document.getElementById("formTitle");
+const submitBtn = document.getElementById("submitBtn");
+const resetBtn = document.getElementById("resetBtn");
 
-        this.setupEventListeners();
-        this.loadEvents();
-    }
+const authorInput = document.getElementById("authorInput");
+const categorySelect = document.getElementById("categorySelect");
+const textInput = document.getElementById("textInput");
 
-    /**
-     * Setup event listeners for form submission and reset
-     */
-    setupEventListeners() {
-        this.messageForm.addEventListener('submit', (event) => this.handleFormSubmit(event));
-        this.resetBtn.addEventListener('click', () => this.resetForm());
-    }
+(async function init() {
+    attachHandlers();
+    await fetchEvents();
+    render();
+})();
 
-    /**
-     * Handle form submission - create or update event
-     */
-    async handleFormSubmit(event) {
-        event.preventDefault();
+function attachHandlers() {
+    form.addEventListener("submit", onSubmit);
+    tableBody.addEventListener("click", onTableClick);
+    resetBtn.addEventListener("click", resetForm);
 
-        if (!this.validateForm()) {
-            return;
-        }
+    const tableHead = document.querySelector("thead");
+    if (tableHead) {
+        tableHead.addEventListener("click", (e) => {
+            const colName = e.target.closest("th")?.dataset.colname;
+            if (!colName) return; 
 
-        const formData = this.getFormData();
-
-        try {
-            if (this.editingId) {
-                await this.updateEvent(this.editingId, formData);
+            if (state.sortBy === colName) {
+                state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
             } else {
-                await this.createEvent(formData);
+                state.sortBy = colName;
+                state.sortDirection = "asc";
             }
 
-            this.resetForm();
-            await this.loadEvents();
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            alert('Помилка при збереженні: ' + error.message);
-        }
-    }
-
-    /**
-     * Create a new event via API
-     */
-    async createEvent(data) {
-        const response = await fetch(`${this.API_URL}/events`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: data.title || data.description,
-                description: data.description,
-                category: data.category,
-                author: data.author,
-            }),
+            render(); 
         });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || 'Failed to create event');
-        }
-    }
-
-    /**
-     * Update an existing event via API
-     */
-    async updateEvent(id, data) {
-        const response = await fetch(`${this.API_URL}/events/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: data.title || data.description,
-                description: data.description,
-                category: data.category,
-                author: data.author,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || 'Failed to update event');
-        }
-    }
-
-    /**
-     * Delete an event via API
-     */
-    async deleteEvent(id) {
-        if (!confirm('Видалити це оголошення?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`${this.API_URL}/events/${id}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete event');
-            }
-
-            if (this.editingId === id) {
-                this.resetForm();
-            }
-
-            await this.loadEvents();
-        } catch (error) {
-            console.error('Error deleting event:', error);
-            alert('Помилка при видаленні: ' + error.message);
-        }
-    }
-
-    /**
-     * Load events from API, with fallback to localStorage
-     */
-    async loadEvents() {
-        try {
-            const response = await fetch(`${this.API_URL}/events`);
-            if (!response.ok) {
-                throw new Error('Failed to load events');
-            }
-
-            this.events = await response.json();
-            this.renderTable();
-        } catch (error) {
-            console.error('Error loading events:', error);
-            console.log('Fallback: Trying to load from localStorage...');
-            // Fallback to localStorage if API is not available
-            this.loadFromStorage();
-            this.renderTable();
-        }
-    }
-
-    /**
-     * Load events from browser's localStorage (fallback)
-     */
-    loadFromStorage() {
-        try {
-            const stored = localStorage.getItem('events');
-            this.events = stored ? JSON.parse(stored) : [];
-        } catch (error) {
-            console.error('Error loading from storage:', error);
-            this.events = [];
-        }
-    }
-
-    /**
-     * Render events table
-     */
-    renderTable() {
-        this.tableBody.innerHTML = '';
-
-        this.events.forEach((event) => {
-            const row = document.createElement('tr');
-            const createdAt = new Date(event.createdAt).toLocaleString('uk-UA');
-
-            row.innerHTML = `
-                <td>${this.escapeHtml(event.author)}</td>
-                <td>${this.escapeHtml(event.category)}</td>
-                <td>${this.escapeHtml(event.description)}</td>
-                <td>${createdAt}</td>
-                <td>
-                    <button class="edit-btn" onclick="window.eventBoard.prepareEdit('${event.id}')">✎</button>
-                    <button class="delete-btn" onclick="window.eventBoard.deleteEventHandler('${event.id}')">🗑</button>
-                </td>
-            `;
-            this.tableBody.appendChild(row);
-        });
-    }
-
-    /**
-     * Prepare form for editing an existing event
-     */
-    prepareEdit(id) {
-        const event = this.events.find((e) => e.id === id);
-        if (!event) return;
-
-        this.authorInput.value = event.author;
-        this.categorySelect.value = event.category;
-        this.textInput.value = event.description;
-        this.editIdInput.value = event.id;
-        this.editingId = id;
-
-        this.submitBtn.textContent = 'Зберегти зміни';
-        this.formTitle.textContent = 'Редагування';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    /**
-     * Public method for delete handler (called from HTML onclick)
-     */
-    deleteEventHandler(id) {
-        this.deleteEvent(id).catch((error) => {
-            console.error('Error in delete handler:', error);
-        });
-    }
-
-    /**
-     * Validate form input
-     */
-    validateForm() {
-        let isValid = true;
-        this.clearErrors();
-
-        const author = this.authorInput.value.trim();
-        const category = this.categorySelect.value;
-        const text = this.textInput.value.trim();
-
-        if (author.length < 3) {
-            this.showError('authorInput', 'authorError', ' ім`я має бути не менше 3 символів');
-            isValid = false;
-        }
-
-        if (!category) {
-            this.showError('categorySelect', 'categoryError', ' Оберіть категорію');
-            isValid = false;
-        }
-
-        if (text.length === 0) {
-            this.showError('textInput', 'textError', 'Оголошення не може бути порожнім');
-            isValid = false;
-        }
-
-        return isValid;
-    }
-
-    /**
-     * Display validation error
-     */
-    showError(inputId, errorId, message) {
-        const input = document.getElementById(inputId);
-        const errorElement = document.getElementById(errorId);
-
-        if (input) {
-            input.classList.add('invalid');
-        }
-        if (errorElement) {
-            errorElement.textContent = message;
-        }
-    }
-
-    /**
-     * Clear all validation errors
-     */
-    clearErrors() {
-        const inputs = ['authorInput', 'categorySelect', 'textInput'];
-        const errors = ['authorError', 'categoryError', 'textError'];
-
-        inputs.forEach((id) => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.classList.remove('invalid');
-            }
-        });
-
-        errors.forEach((id) => {
-            const error = document.getElementById(id);
-            if (error) {
-                error.textContent = '';
-            }
-        });
-    }
-
-    /**
-     * Reset form to initial state
-     */
-    resetForm() {
-        this.messageForm.reset();
-        this.editIdInput.value = '';
-        this.editingId = null;
-        this.submitBtn.textContent = 'Опублікувати';
-        this.formTitle.textContent = 'Написати оголошення';
-        this.clearErrors();
-    }
-
-    /**
-     * Get form data
-     */
-    getFormData() {
-        return {
-            author: this.authorInput.value,
-            category: this.categorySelect.value,
-            description: this.textInput.value,
-            title: this.textInput.value.substring(0, 50), // Use first 50 chars as title
-        };
-    }
-
-    /**
-     * Escape HTML characters to prevent XSS
-     */
-    escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;',
-        };
-        return text.replace(/[&<>"']/g, (char) => map[char]);
     }
 }
 
-/**
- * Initialize the application when DOM is ready
- */
-document.addEventListener('DOMContentLoaded', () => {
-    window.eventBoard = new EventBoard();
-});
+async function fetchEvents() {
+    try {
+        const res = await fetch(`${API_URL}/events`);
+        const result = await res.json();
+        const rawEvents = result.data || [];
+
+        const usersRes = await fetch(`${API_URL}/users`);
+        const usersResult = await usersRes.json();
+        
+        const users = usersResult.data || usersResult.items || (Array.isArray(usersResult) ? usersResult : []);
+
+        state.events = rawEvents.map(event => {
+            const foundUser = users.find(u => u.id === event.author_id);
+            
+            return {
+                ...event,
+                author: foundUser ? foundUser.name : `Користувач (ID: ${event.author_id})`
+            };
+        });
+
+    } catch (err) {
+        console.error("Помилка завантаження подій", err);
+    }
+}
+
+async function onSubmit(e) {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    const dto = await prepareDto();
+    if (!dto) return;
+
+    if (state.editingId) {
+        await updateEvent(state.editingId, dto);
+    } else {
+        await createEvent(dto);
+    }
+
+    await fetchEvents();
+    render();
+    resetForm();
+}
+
+function onTableClick(e) {
+    const deleteId = e.target.dataset.delete;
+    const editId = e.target.dataset.edit;
+
+    if (deleteId) {
+        if (confirm("Ви впевнені, що хочете видалити оголошення?")) {
+            deleteEvent(deleteId);
+        }
+    }
+
+    if (editId) {
+        startEdit(editId);
+    }
+}
+
+async function createEvent(dto) {
+    try {
+        const res = await fetch(`${API_URL}/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dto)
+        });
+
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error?.message || "Failed to create event");
+        }
+    } catch (err) {
+        console.error("Помилка створення події", err);
+        alert("Помилка при збереженні: " + err.message);
+    }
+}
+
+async function updateEvent(id, dto) {
+    try {
+        const res = await fetch(`${API_URL}/events/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dto)
+        });
+
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error?.message || "Failed to update event");
+        }
+    } catch (err) {
+        console.error("Помилка оновлення події", err);
+        alert("Помилка при оновленні: " + err.message);
+    }
+}
+
+async function deleteEvent(id) {
+    try {
+        const res = await fetch(`${API_URL}/events/${id}`, {
+            method: "DELETE"
+        });
+
+        if (!res.ok) {
+            throw new Error("Failed to delete event");
+        }
+
+        await fetchEvents();
+        render();
+    } catch (err) {
+        console.error("Помилка видалення події", err);
+        alert("Помилка при видаленні: " + err.message);
+    }
+}
+
+async function prepareDto() {
+    const categoryMap = {
+        "Оголошення": "announcement",
+        "Навчання": "workshop",
+        "Дозвілля": "meeting"
+    };
+
+    const backendCategory =
+        categoryMap[categorySelect.value] || categorySelect.value;
+
+    const authorName = authorInput.value.trim();
+    let authorId = null;
+
+    try {
+        const usersResponse = await fetch(`${API_URL}/users`);
+        const usersResult = await usersResponse.json();
+        const users = usersResult.data || [];
+
+        const foundUser = users.find(
+            (u) => u.name.toLowerCase() === authorName.toLowerCase()
+        );
+
+        if (foundUser) {
+            authorId = foundUser.id;
+        } else {
+            const createUserResponse = await fetch(`${API_URL}/users`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: authorName,
+                    email: `${authorName
+                        .toLowerCase()
+                        .replace(/\s+/g, "")}_${Date.now()}@example.com`
+                })
+            });
+
+            const newUser = await createUserResponse.json();
+            authorId = newUser.id || newUser.data?.id;
+        }
+    } catch (err) {
+        console.error("Помилка обработки автора", err);
+        authorId = 1;
+    }
+
+    return {
+        title: textInput.value.substring(0, 50),
+        description: textInput.value.trim(),
+        category: backendCategory,
+        author_id: Number(authorId || 1)
+    };
+}
+function render() {
+    tableBody.innerHTML = "";
+
+    let sortedEvents = [...state.events];
+
+    sortedEvents.sort((a, b) => {
+        let result = 0;
+
+        switch (state.sortBy) {
+            case "author":
+                const authorA = a.author || "Анонім";
+                const authorB = b.author || "Анонім";
+                result = authorA.localeCompare(authorB, "uk-UA");
+                break;
+
+            case "category":
+                const catA = a.category || "";
+                const catB = b.category || "";
+                result = catA.localeCompare(catB, "uk-UA");
+                break;
+
+            case "date":
+            default:
+                const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+                const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+                result = dateA - dateB;
+                break;
+        }
+
+        return state.sortDirection === "asc" ? result : -result;
+    });
+
+    sortedEvents.forEach((item) => {
+        const dateStr = item.createdAt
+            ? new Date(item.createdAt).toLocaleString("uk-UA")
+            : "---";
+
+        const authorDisplay = item.author || "Анонім";
+
+        const displayCategoryMap = {
+            "announcement": "Оголошення",
+            "workshop": "Навчання",
+            "meeting": "Дозвілля"
+        };
+        const categoryDisplay = displayCategoryMap[item.category] || item.category;
+
+        tableBody.innerHTML += `
+            <tr>
+                <td>${escapeHtml(String(authorDisplay))}</td>
+                <td>${escapeHtml(categoryDisplay)}</td>
+                <td>${escapeHtml(item.description)}</td>
+                <td>${dateStr}</td>
+                <td>
+                    <button type="button" data-edit="${item.id}">✎</button>
+                    <button type="button" data-delete="${item.id}">🗑</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+
+function startEdit(id) {
+    const item = state.events.find(
+        (x) => String(x.id) === String(id)
+    );
+
+    if (!item) return;
+
+    state.editingId = id;
+
+    const reverseCategoryMap = {
+        announcement: "Оголошення",
+        workshop: "Навчання",
+        meeting: "Дозвілля"
+    };
+
+    authorInput.value =
+        item.author || `ID: ${item.author_id}`;
+    categorySelect.value =
+        reverseCategoryMap[item.category] || item.category;
+    textInput.value = item.description;
+
+    formTitle.textContent = "Редагування оголошення";
+    submitBtn.textContent = "Зберегти зміни";
+}
+
+function resetForm() {
+    state.editingId = null;
+    form.reset();
+    clearErrors();
+
+    formTitle.textContent = "Нове оголошення";
+    submitBtn.textContent = "Додати";
+    authorInput.focus();
+}
+
+function validate() {
+    clearErrors();
+    let valid = true;
+
+    if (authorInput.value.trim().length < 3) {
+        showError(
+            "authorInput",
+            "authorError",
+            "Ім'я має бути не менше 3 символів"
+        );
+        valid = false;
+    }
+
+    if (!categorySelect.value) {
+        showError(
+            "categorySelect",
+            "categoryError",
+            "Оберіть категорію"
+        );
+        valid = false;
+    }
+
+    if (textInput.value.trim().length === 0) {
+        showError(
+            "textInput",
+            "textError",
+            "Оголошення не може бути порожнім"
+        );
+        valid = false;
+    }
+
+    return valid;
+}
+
+function showError(inputId, errorId, message) {
+    const inputEl = document.getElementById(inputId);
+
+    if (inputEl) {
+        inputEl.classList.add("invalid");
+    }
+
+    const errorEl = document.getElementById(errorId);
+
+    if (errorEl) {
+        errorEl.textContent = message;
+    }
+}
+
+function clearErrors() {
+    document
+        .querySelectorAll(".invalid")
+        .forEach((el) => el.classList.remove("invalid"));
+
+    document
+        .querySelectorAll(".error-text")
+        .forEach((el) => (el.textContent = ""));
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+

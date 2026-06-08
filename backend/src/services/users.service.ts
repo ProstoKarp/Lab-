@@ -1,89 +1,47 @@
-import { UsersRepository } from '../repositories/users.repository';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dtos/users.dto';
 import { ApiError } from '../errors/ApiError';
+import { UsersRepository } from '../repositories/users.repository';
+import { CreateUserDto, UpdateUserDto, UserRow } from '../dtos/users.dto';
+import { sqlLimit } from '../db/sql';
 
 export class UsersService {
   constructor(private usersRepository: UsersRepository) {}
-
-  createUser(dto: CreateUserDto): UserResponseDto {
-    if (!dto.name || dto.name.trim().length < 3) {
-      throw ApiError.badRequest('User name must be at least 3 characters long');
-    }
-
-    if (!dto.email || !this.isValidEmail(dto.email)) {
-      throw ApiError.badRequest('Invalid email format');
-    }
-
-    const user = this.usersRepository.create(dto.name, dto.email);
-    return this.mapToResponse(user);
+  async createUser(dto: CreateUserDto): Promise<UserRow> {
+    this.validateName(dto.name);
+    this.validateEmail(dto.email);
+    const existing = await this.usersRepository.findByEmail(dto.email);
+    if (existing) throw ApiError.conflict('Email already exists');
+    return this.usersRepository.create(dto.name.trim(), dto.email.trim().toLowerCase());
   }
-
-  getAllUsers(): UserResponseDto[] {
-    const users = this.usersRepository.findAll();
-    return users.map((u) => this.mapToResponse(u));
+  async getAllUsers(sortBy?: string, order?: string, limit?: unknown): Promise<UserRow[]> {
+    return this.usersRepository.findAll(sortBy, order, sqlLimit(limit, 50));
   }
-
-  getUserById(id: string): UserResponseDto {
-    const user = this.usersRepository.findById(id);
-    if (!user) {
-      throw ApiError.notFound('User not found');
-    }
-    return this.mapToResponse(user);
+  async getUserById(id: unknown): Promise<UserRow> {
+    const user = await this.usersRepository.findById(id);
+    if (!user) throw ApiError.notFound('User not found');
+    return user;
   }
-
-  updateUser(id: string, dto: UpdateUserDto): UserResponseDto {
-    const user = this.usersRepository.findById(id);
-    if (!user) {
-      throw ApiError.notFound('User not found');
+  async updateUser(id: unknown, dto: UpdateUserDto): Promise<UserRow> {
+    await this.getUserById(id);
+    const updates: UpdateUserDto = {};
+    if (dto.name !== undefined) { this.validateName(dto.name); updates.name = dto.name.trim(); }
+    if (dto.email !== undefined) { this.validateEmail(dto.email); updates.email = dto.email.trim().toLowerCase(); }
+    if (updates.email) {
+      const existing = await this.usersRepository.findByEmail(updates.email);
+      if (existing && String(existing.id) !== String(id)) throw ApiError.conflict('Email already exists');
     }
-
-    const updates: Partial<any> = {};
-
-    if (dto.name !== undefined) {
-      if (dto.name.trim().length < 3) {
-        throw ApiError.badRequest('User name must be at least 3 characters long');
-      }
-      updates.name = dto.name;
-    }
-
-    if (dto.email !== undefined) {
-      if (!this.isValidEmail(dto.email)) {
-        throw ApiError.badRequest('Invalid email format');
-      }
-      updates.email = dto.email;
-    }
-
-    const updatedUser = this.usersRepository.update(id, updates);
-    if (!updatedUser) {
-      throw ApiError.internal('Failed to update user');
-    }
-
-    return this.mapToResponse(updatedUser);
+    const updated = await this.usersRepository.update(id, updates);
+    if (!updated) throw ApiError.notFound('User not found');
+    return updated;
   }
-
-  deleteUser(id: string): void {
-    const user = this.usersRepository.findById(id);
-    if (!user) {
-      throw ApiError.notFound('User not found');
-    }
-
-    const deleted = this.usersRepository.delete(id);
-    if (!deleted) {
-      throw ApiError.internal('Failed to delete user');
-    }
+  async deleteUser(id: unknown): Promise<void> {
+    await this.getUserById(id);
+    const ok = await this.usersRepository.delete(id);
+    if (!ok) throw ApiError.notFound('User not found');
   }
-
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  private validateName(name: unknown): void {
+    if (typeof name !== 'string' || name.trim().length < 3) throw ApiError.badRequest('User name must be at least 3 characters long');
   }
-
-  private mapToResponse(user: any): UserResponseDto {
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt,
-    };
+  private validateEmail(email: unknown): void {
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw ApiError.badRequest('Invalid email format');
   }
 }
