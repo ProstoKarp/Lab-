@@ -9,8 +9,9 @@ class RegistrationsService {
         this.eventsRepository = eventsRepository;
         this.usersRepository = usersRepository;
     }
-    async registerUserForEvent(dto) {
+    async registerUserForEvent(dto, currentUserId) {
         this.validateRegistration(dto);
+        this.assertCurrentUser(dto.user_id, currentUserId, 'register');
         const event = await this.eventsRepository.findById(dto.event_id);
         if (!event)
             throw ApiError_1.ApiError.badRequest('Event not found');
@@ -31,8 +32,9 @@ class RegistrationsService {
             throw ApiError_1.ApiError.notFound('Registration not found');
         return registration;
     }
-    async updateRegistration(id, dto) {
-        await this.getRegistrationById(id);
+    async updateRegistration(id, dto, currentUserId) {
+        const current = await this.getRegistrationById(id);
+        this.assertCurrentUser(current.user_id, currentUserId, 'update');
         if (dto.status !== undefined && !statuses.includes(dto.status)) {
             throw ApiError_1.ApiError.badRequest(`Status must be one of: ${statuses.join(', ')}`);
         }
@@ -41,8 +43,9 @@ class RegistrationsService {
             throw ApiError_1.ApiError.notFound('Registration not found');
         return updated;
     }
-    async deleteRegistration(id) {
-        await this.getRegistrationById(id);
+    async deleteRegistration(id, currentUserId) {
+        const current = await this.getRegistrationById(id);
+        this.assertCurrentUser(current.user_id, currentUserId, 'delete');
         const ok = await this.registrationsRepository.delete(id);
         if (!ok)
             throw ApiError_1.ApiError.notFound('Registration not found');
@@ -60,6 +63,14 @@ class RegistrationsService {
             throw ApiError_1.ApiError.badRequest('event_id must be a positive integer');
         if (dto.status !== undefined && !statuses.includes(dto.status))
             throw ApiError_1.ApiError.badRequest(`Status must be one of: ${statuses.join(', ')}`);
+    }
+    assertCurrentUser(userId, currentUserId, action) {
+        if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) {
+            throw ApiError_1.ApiError.badRequest('X-Demo-UserId header is required for registration actions');
+        }
+        if (Number(currentUserId) !== Number(userId)) {
+            throw ApiError_1.ApiError.forbidden(`You can ${action} only your own registrations`);
+        }
     }
 }
 exports.RegistrationsService = RegistrationsService;

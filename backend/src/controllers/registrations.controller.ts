@@ -4,7 +4,7 @@ import { RegistrationsService } from '../services/registrations.service';
 export class RegistrationsController {
   constructor(private registrationsService: RegistrationsService) {}
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { res.status(201).json({ data: await this.registrationsService.registerUserForEvent(req.body) }); } catch (e) { next(e); }
+    try { res.status(201).json({ data: await this.registrationsService.registerUserForEvent(req.body, req.header('X-Demo-UserId')) }); } catch (e) { next(e); }
   }
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -16,10 +16,10 @@ export class RegistrationsController {
     try { res.json({ data: await this.registrationsService.getRegistrationById(req.params.id) }); } catch (e) { next(e); }
   }
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { res.json({ data: await this.registrationsService.updateRegistration(req.params.id, req.body) }); } catch (e) { next(e); }
+    try { res.json({ data: await this.registrationsService.updateRegistration(req.params.id, req.body, req.header('X-Demo-UserId')) }); } catch (e) { next(e); }
   }
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { await this.registrationsService.deleteRegistration(req.params.id); res.status(204).send(); } catch (e) { next(e); }
+    try { await this.registrationsService.deleteRegistration(req.params.id, req.header('X-Demo-UserId')); res.status(204).send(); } catch (e) { next(e); }
   }
   async getAllWithDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

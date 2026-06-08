@@ -7,13 +7,14 @@ export declare class RegistrationsService {
     private eventsRepository;
     private usersRepository;
     constructor(registrationsRepository: RegistrationsRepository, eventsRepository: EventsRepository, usersRepository: UsersRepository);
-    registerUserForEvent(dto: CreateRegistrationDto): Promise<RegistrationRow>;
+    registerUserForEvent(dto: CreateRegistrationDto, currentUserId?: unknown): Promise<RegistrationRow>;
     getAllRegistrations(query: any): Promise<RegistrationRow[]>;
     getRegistrationById(id: unknown): Promise<RegistrationRow>;
-    updateRegistration(id: unknown, dto: UpdateRegistrationDto): Promise<RegistrationRow>;
-    deleteRegistration(id: unknown): Promise<void>;
+    updateRegistration(id: unknown, dto: UpdateRegistrationDto, currentUserId?: unknown): Promise<RegistrationRow>;
+    deleteRegistration(id: unknown, currentUserId?: unknown): Promise<void>;
     getAllRegistrationsWithDetails(query: any): Promise<any[]>;
     getRegistrationStats(): Promise<any[]>;
     private validateRegistration;
+    private assertCurrentUser;
 }
 //# sourceMappingURL=registrations.service.d.ts.map

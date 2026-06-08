@@ -7,7 +7,7 @@ class RegistrationsController {
     }
     async register(req, res, next) {
         try {
-            res.status(201).json({ data: await this.registrationsService.registerUserForEvent(req.body) });
+            res.status(201).json({ data: await this.registrationsService.registerUserForEvent(req.body, req.header('X-Demo-UserId')) });
         }
         catch (e) {
             next(e);
@@ -32,7 +32,7 @@ class RegistrationsController {
     }
     async update(req, res, next) {
         try {
-            res.json({ data: await this.registrationsService.updateRegistration(req.params.id, req.body) });
+            res.json({ data: await this.registrationsService.updateRegistration(req.params.id, req.body, req.header('X-Demo-UserId')) });
         }
         catch (e) {
             next(e);
@@ -40,7 +40,7 @@ class RegistrationsController {
     }
     async delete(req, res, next) {
         try {
-            await this.registrationsService.deleteRegistration(req.params.id);
+            await this.registrationsService.deleteRegistration(req.params.id, req.header('X-Demo-UserId'));
             res.status(204).send();
         }
         catch (e) {

@@ -5,6 +5,7 @@ export declare class ApiError extends Error {
     static badRequest(message: string, details?: unknown): ApiError;
     static notFound(message?: string): ApiError;
     static conflict(message: string, details?: unknown): ApiError;
+    static forbidden(message?: string, details?: unknown): ApiError;
     static internal(message?: string): ApiError;
 }
 //# sourceMappingURL=ApiError.d.ts.map

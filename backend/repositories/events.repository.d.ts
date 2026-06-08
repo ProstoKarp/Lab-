@@ -12,7 +12,6 @@ export declare class EventsRepository {
     findAll(filters?: EventFilters): Promise<EventRow[]>;
     findById(id: unknown): Promise<EventRow | null>;
     findWithAuthor(filters?: EventFilters): Promise<any[]>;
-    unsafeSearch(q: string): Promise<EventRow[]>;
     update(id: unknown, updates: Partial<{
         title: string;
         description: string;

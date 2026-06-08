@@ -6,7 +6,6 @@ export declare class EventsController {
     create(req: Request, res: Response, next: NextFunction): Promise<void>;
     getAll(req: Request, res: Response, next: NextFunction): Promise<void>;
     getWithAuthors(req: Request, res: Response, next: NextFunction): Promise<void>;
-    unsafeSearch(req: Request, res: Response, next: NextFunction): Promise<void>;
     getById(req: Request, res: Response, next: NextFunction): Promise<void>;
     update(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;

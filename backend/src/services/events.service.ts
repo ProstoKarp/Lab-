@@ -24,12 +24,10 @@ export class EventsService {
   async getEventsWithAuthors(query: any): Promise<any[]> {
     return this.eventsRepository.findWithAuthor(query);
   }
-  async unsafeSearch(q: unknown): Promise<EventRow[]> {
-    if (typeof q !== 'string') throw ApiError.badRequest('q is required');
-    return this.eventsRepository.unsafeSearch(q);
-  }
-  async updateEvent(id: unknown, dto: UpdateEventDto): Promise<EventRow> {
-    await this.getEventById(id);
+
+  async updateEvent(id: unknown, dto: UpdateEventDto, currentUserId?: unknown): Promise<EventRow> {
+    const current = await this.getEventById(id);
+    this.assertOwner(current, currentUserId);
     const updates: UpdateEventDto = {};
     if (dto.title !== undefined) {
       if (typeof dto.title !== 'string' || dto.title.trim().length < 5) throw ApiError.badRequest('Event title must be at least 5 characters long');
@@ -47,10 +45,19 @@ export class EventsService {
     if (!updated) throw ApiError.notFound('Event not found');
     return updated;
   }
-  async deleteEvent(id: unknown): Promise<void> {
-    await this.getEventById(id);
+  async deleteEvent(id: unknown, currentUserId?: unknown): Promise<void> {
+    const current = await this.getEventById(id);
+    this.assertOwner(current, currentUserId);
     const ok = await this.eventsRepository.delete(id);
     if (!ok) throw ApiError.notFound('Event not found');
+  }
+  private assertOwner(event: EventRow, currentUserId?: unknown): void {
+    if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) {
+      throw ApiError.badRequest('X-Demo-UserId header is required for editing or deleting events');
+    }
+    if (Number(currentUserId) !== Number(event.author_id)) {
+      throw ApiError.forbidden('You can edit or delete only your own events');
+    }
   }
   private validateEvent(dto: CreateEventDto): void {
     if (!dto || typeof dto !== 'object') throw ApiError.badRequest('Request body is required');

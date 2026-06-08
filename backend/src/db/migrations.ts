@@ -4,7 +4,7 @@ import { dbAll, dbRun } from './db';
 import { sqlText } from './sql';
 
 type MigrationRow = { name: string };
-const migrationsDir = path.join(process.cwd(), 'src', 'migrations');
+const migrationsDir = path.join(__dirname, '..', 'src', 'migrations');
 
 function splitSql(sql: string): string[] {
   return sql.split(';').map((s) => s.trim()).filter(Boolean);

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Дошка повідомлень групи</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="/js/main.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Дошка оголошень групи (Варіант: 4)</h1>
+            <p class="subtitle">ЛР 4: фронтенд працює з бекендом через API, CORS, DTO, loading/success/empty/error.</p>
+        </header>
+        <div id="notice" class="notice" role="status"></div>
+        <main>
+            <div class="main-layout">
+                <section id="create-section">
+                    <h2>Створити користувача</h2>
+                    <form id="userForm" novalidate>
+                        <div class="field">
+                            <label for="newUserName">Ім'я</label>
+                            <input id="newUserName" type="text" placeholder="Іванов Іван" required minlength="3" maxlength="50">
+                            <p id="newUserNameError" class="error-text"></p>
+                        </div>
+                        <button type="submit" id="createUserBtn">Створити користувача</button>
+                    </form>
+                    <hr>
+                    <h2 id="formTitle">Написати оголошення</h2>
+                    <form id="messageForm" novalidate>
+                        <input type="hidden" id="editId">
+                        <div class="field">
+                            <label for="authorInput">Автор / поточний користувач</label>
+                            <select id="authorInput" required></select>
+                            <p id="authorError" class="error-text"></p>
+                        </div>
+                        <div class="field">
+                            <label for="categorySelect">Категорія</label>
+                            <select id="categorySelect" required>
+                                <option value="">Оберіть категорію</option>
+                                <option value="announcement">Оголошення</option>
+                                <option value="workshop">Навчання</option>
+                                <option value="meeting">Дозвілля</option>
+                                <option value="conference">Конференція</option>
+                            </select>
+                            <p class="error-text" id="categoryError"></p>
+                        </div>
+                        <div class="field">
+                            <label for="textInput">Текст</label>
+                            <textarea id="textInput" rows="4" required minlength="1"></textarea>
+                            <p class="error-text" id="textError"></p>
+                        </div>
+                        <div class="buttons">
+                            <button type="submit" id="submitBtn">Опублікувати</button>
+                            <button type="button" id="resetBtn">Очистити</button>
+                        </div>
+                    </form>
+                    <hr>
+                    <h3>Реєстрації на події</h3>
+                    <form id="registrationForm" novalidate>
+                        <p class="hint">На дошці оголошень зареєструватися на подію може будь-який створений користувач.</p>
+                        <div class="field">
+                            <label for="registrationUser">Користувач</label>
+                            <select id="registrationUser" required></select>
+                        </div>
+                        <div class="field">
+                            <label for="registrationEvent">Подія</label>
+                            <select id="registrationEvent" required></select>
+                        </div>
+                        <div class="field">
+                            <label for="registrationStatus">Статус</label>
+                            <select id="registrationStatus" required>
+                                <option value="registered">Зареєстровано</option>
+                                <option value="attended">Відвідав/відвідала</option>
+                                <option value="cancelled">Скасовано</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="registrationBtn">Додати реєстрацію</button>
+                    </form>
+                </section>
+                <section id="list-section">
+                    <h2>Всі оголошення</h2>
+                    <div class="toolbar">
+                        <select id="filterCategory">
+                            <option value="">Усі категорії</option>
+                            <option value="announcement">Оголошення</option>
+                            <option value="workshop">Навчання</option>
+                            <option value="meeting">Дозвілля</option>
+                            <option value="conference">Конференція</option>
+                        </select>
+                        <button type="button" id="reloadBtn">Оновити</button>
+                        <button type="button" id="cancelBtn">Скасувати запит</button>
+                    </div>
+                    <div id="listStatus" class="status"></div>
+                    <table id="messageTable">
+                        <thead>
+                            <tr>
+                                <th data-colname="author_name">Автор <span>↕</span></th>
+                                <th data-colname="category">Категорія <span>↕</span></th>
+                                <th>Текст оголошення</th>
+                                <th data-colname="createdAt">Дата створення <span>↕</span></th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messageTableBody"></tbody>
+                    </table>
+                    <h2>Користувачі</h2>
+                    <div id="usersStatus" class="status"></div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Ім'я</th><th>Дії</th></tr></thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                    <h2>Реєстрації</h2>
+                    <div id="registrationsStatus" class="status"></div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Користувач</th><th>Подія</th><th>Статус</th><th>Дії</th></tr></thead>
+                        <tbody id="registrationsTableBody"></tbody>
+                    </table>
+                    <h2>Статистика подій</h2>
+                    <div id="statsStatus" class="status"></div>
+                    <table>
+                        <thead><tr><th>Подія</th><th>Усього</th><th>Зареєстровано</th><th>Відвідали</th><th>Скасовано</th></tr></thead>
+                        <tbody id="statsTableBody"></tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

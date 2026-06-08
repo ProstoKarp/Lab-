@@ -12,8 +12,9 @@ export class RegistrationsService {
     private eventsRepository: EventsRepository,
     private usersRepository: UsersRepository,
   ) {}
-  async registerUserForEvent(dto: CreateRegistrationDto): Promise<RegistrationRow> {
+  async registerUserForEvent(dto: CreateRegistrationDto, currentUserId?: unknown): Promise<RegistrationRow> {
     this.validateRegistration(dto);
+    this.assertCurrentUser(dto.user_id, currentUserId, 'register');
     const event = await this.eventsRepository.findById(dto.event_id);
     if (!event) throw ApiError.badRequest('Event not found');
     const user = await this.usersRepository.findById(dto.user_id);
@@ -30,8 +31,9 @@ export class RegistrationsService {
     if (!registration) throw ApiError.notFound('Registration not found');
     return registration;
   }
-  async updateRegistration(id: unknown, dto: UpdateRegistrationDto): Promise<RegistrationRow> {
-    await this.getRegistrationById(id);
+  async updateRegistration(id: unknown, dto: UpdateRegistrationDto, currentUserId?: unknown): Promise<RegistrationRow> {
+    const current = await this.getRegistrationById(id);
+    this.assertCurrentUser(current.user_id, currentUserId, 'update');
     if (dto.status !== undefined && !statuses.includes(dto.status)) {
       throw ApiError.badRequest(`Status must be one of: ${statuses.join(', ')}`);
     }
@@ -39,8 +41,9 @@ export class RegistrationsService {
     if (!updated) throw ApiError.notFound('Registration not found');
     return updated;
   }
-  async deleteRegistration(id: unknown): Promise<void> {
-    await this.getRegistrationById(id);
+  async deleteRegistration(id: unknown, currentUserId?: unknown): Promise<void> {
+    const current = await this.getRegistrationById(id);
+    this.assertCurrentUser(current.user_id, currentUserId, 'delete');
     const ok = await this.registrationsRepository.delete(id);
     if (!ok) throw ApiError.notFound('Registration not found');
   }
@@ -54,5 +57,13 @@ export class RegistrationsService {
     if (!Number.isInteger(Number(dto.user_id)) || Number(dto.user_id) <= 0) throw ApiError.badRequest('user_id must be a positive integer');
     if (!Number.isInteger(Number(dto.event_id)) || Number(dto.event_id) <= 0) throw ApiError.badRequest('event_id must be a positive integer');
     if (dto.status !== undefined && !statuses.includes(dto.status)) throw ApiError.badRequest(`Status must be one of: ${statuses.join(', ')}`);
+  }
+  private assertCurrentUser(userId: unknown, currentUserId: unknown, action: string): void {
+    if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) {
+      throw ApiError.badRequest('X-Demo-UserId header is required for registration actions');
+    }
+    if (Number(currentUserId) !== Number(userId)) {
+      throw ApiError.forbidden(`You can ${action} only your own registrations`);
+    }
   }
 }

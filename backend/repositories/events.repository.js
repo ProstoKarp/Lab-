@@ -49,11 +49,6 @@ class EventsRepository {
       FROM events e JOIN users u ON u.id = e.author_id
       ${whereSql} ORDER BY ${sortSql} ${sortOrder} LIMIT ${limit};`);
     }
-    async unsafeSearch(q) {
-        return (0, db_1.dbAll)(`SELECT id, title, description, category, author_id, createdAt, updatedAt
-      FROM events WHERE title LIKE '%${q}%' OR description LIKE '%${q}%'
-      ORDER BY createdAt DESC LIMIT 20;`);
-    }
     async update(id, updates) {
         const eventId = (0, sql_1.sqlNumber)(id, 'event id');
         const current = await this.findById(eventId);

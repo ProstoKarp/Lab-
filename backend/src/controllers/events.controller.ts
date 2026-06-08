@@ -18,19 +18,15 @@ export class EventsController {
       res.json({ data: events, meta: { count: events.length } });
     } catch (e) { next(e); }
   }
-  async unsafeSearch(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const events = await this.eventsService.unsafeSearch(req.query.q);
-      res.json({ data: events, meta: { count: events.length, warning: 'Educational SQLi demo: this endpoint intentionally uses unsafe string concatenation.' } });
-    } catch (e) { next(e); }
-  }
+
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.json({ data: await this.eventsService.getEventById(req.params.id) }); } catch (e) { next(e); }
   }
+
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { res.json({ data: await this.eventsService.updateEvent(req.params.id, req.body) }); } catch (e) { next(e); }
+    try { res.json({ data: await this.eventsService.updateEvent(req.params.id, req.body, req.header('X-Demo-UserId')) }); } catch (e) { next(e); }
   }
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { await this.eventsService.deleteEvent(req.params.id); res.status(204).send(); } catch (e) { next(e); }
+    try { await this.eventsService.deleteEvent(req.params.id, req.header('X-Demo-UserId')); res.status(204).send(); } catch (e) { next(e); }
   }
 }

@@ -27,13 +27,9 @@ class EventsService {
     async getEventsWithAuthors(query) {
         return this.eventsRepository.findWithAuthor(query);
     }
-    async unsafeSearch(q) {
-        if (typeof q !== 'string')
-            throw ApiError_1.ApiError.badRequest('q is required');
-        return this.eventsRepository.unsafeSearch(q);
-    }
-    async updateEvent(id, dto) {
-        await this.getEventById(id);
+    async updateEvent(id, dto, currentUserId) {
+        const current = await this.getEventById(id);
+        this.assertOwner(current, currentUserId);
         const updates = {};
         if (dto.title !== undefined) {
             if (typeof dto.title !== 'string' || dto.title.trim().length < 5)
@@ -55,11 +51,20 @@ class EventsService {
             throw ApiError_1.ApiError.notFound('Event not found');
         return updated;
     }
-    async deleteEvent(id) {
-        await this.getEventById(id);
+    async deleteEvent(id, currentUserId) {
+        const current = await this.getEventById(id);
+        this.assertOwner(current, currentUserId);
         const ok = await this.eventsRepository.delete(id);
         if (!ok)
             throw ApiError_1.ApiError.notFound('Event not found');
+    }
+    assertOwner(event, currentUserId) {
+        if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) {
+            throw ApiError_1.ApiError.badRequest('X-Demo-UserId header is required for editing or deleting events');
+        }
+        if (Number(currentUserId) !== Number(event.author_id)) {
+            throw ApiError_1.ApiError.forbidden('You can edit or delete only your own events');
+        }
     }
     validateEvent(dto) {
         if (!dto || typeof dto !== 'object')

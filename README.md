@@ -1,19 +1,13 @@
-# Board Application API — Лабораторна робота 3
+# Board Application — Лабораторна робота 4
 
-Проєкт залишає початкову ідею та дизайн: це **дошка оголошень групи** з авторами, категоріями та текстом оголошення. У версії `0.3.0` бекенд переведено на SQLite, TypeScript, міграції, seed-дані, повний CRUD і контрольовані помилки API.
+Проєкт зберігає початкову ідею та дизайн: **дошка оголошень групи** з авторами, категоріями, оголошеннями та реєстраціями на події. У версії `0.4.0` до бекенду з ЛР 3 підключено TypeScript-фронтенд, який працює через HTTP API, показує стани UI та обробляє помилки.
 
-## Запуск
+## Запуск у двох терміналах
+
+Перший раз встановити залежності:
 
 ```bash
 npm install
-npm run build
-npm start
-```
-
-Для розробки без попереднього build:
-
-```bash
-npm run dev
 ```
 
 Заповнити базу тестовими даними:
@@ -22,283 +16,218 @@ npm run dev
 npm run seed
 ```
 
-Frontend відкривається файлом:
+Термінал 1 — бекенд:
+
+```bash
+npm run dev:be
+```
+
+Термінал 2 — фронтенд:
+
+```bash
+npm run dev:fe
+```
+
+Відкрити фронтенд:
 
 ```text
-Frontend/index.html
+http://localhost:5173
 ```
 
-API працює на:
+Бекенд API:
 
 ```text
-http://localhost:3000/api
+http://localhost:3000/api/v1
 ```
 
-## SQLite
+## Що реалізовано для ЛР 4
 
-- SQLite-файл створюється автоматично у `data/app.db`.
-- `data/`, `*.db`, `*.db-journal` додані в `.gitignore`, тому локальна база не має потрапляти в репозиторій.
-- При старті сервера виконується `runMigrations()` до `app.listen()`.
-- Увімкнено `PRAGMA foreign_keys = ON`.
-- ORM не використовується.
-- SQL-запити ізольовані в `src/repositories/*`, а не розкидані по routes.
+### Бекенд
 
-## Структура
-
-```text
-src/
-├── app.ts
-├── server.ts
-├── controllers/
-├── services/
-├── repositories/
-├── routes/
-├── middleware/
-├── errors/
-├── db/
-│   ├── db.ts
-│   ├── migrations.ts
-│   ├── seed.ts
-│   └── sql.ts
-├── dtos/
-└── migrations/
-    ├── 001_init.sql
-    └── 002_add_indexes.sql
-Frontend/
-├── index.html
-├── app.js
-└── styles.css
-```
-
-## Схема БД
-
-### `users`
-
-| Поле | Тип | Обмеження |
-|---|---|---|
-| `id` | INTEGER | PRIMARY KEY |
-| `name` | TEXT | NOT NULL, CHECK length >= 3 |
-| `email` | TEXT | NOT NULL, UNIQUE |
-| `createdAt` | TEXT | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
-
-### `events`
-
-| Поле | Тип | Обмеження |
-|---|---|---|
-| `id` | INTEGER | PRIMARY KEY |
-| `title` | TEXT | NOT NULL, CHECK length >= 5 |
-| `description` | TEXT | NOT NULL, CHECK not empty |
-| `category` | TEXT | NOT NULL, CHECK: `announcement`, `meeting`, `workshop`, `conference` |
-| `author_id` | INTEGER | NOT NULL, FK → `users(id)` ON DELETE CASCADE |
-| `createdAt` | TEXT | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
-| `updatedAt` | TEXT | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
-
-### `registrations`
-
-| Поле | Тип | Обмеження |
-|---|---|---|
-| `id` | INTEGER | PRIMARY KEY |
-| `user_id` | INTEGER | NOT NULL, FK → `users(id)` ON DELETE CASCADE |
-| `event_id` | INTEGER | NOT NULL, FK → `events(id)` ON DELETE CASCADE |
-| `status` | TEXT | NOT NULL, CHECK: `registered`, `attended`, `cancelled` |
-| `createdAt` | TEXT | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
-| `UNIQUE(user_id, event_id)` | — | один користувач не може двічі зареєструватися на ту саму подію |
-
-### `schema_migrations`
-
-Технічна таблиця для фіксації застосованих міграцій.
-
-## Зв’язки
-
-- `users 1:N events`: один користувач може створити багато оголошень/подій.
-- `users 1:N registrations`: один користувач може мати багато реєстрацій.
-- `events 1:N registrations`: одна подія може мати багато реєстрацій.
-- Для дочірніх таблиць використано `ON DELETE CASCADE`, щоб при видаленні користувача або події не залишалися “биті” записи.
-
-## Міграції
-
-Міграції лежать у `src/migrations/` і застосовуються за порядком назв:
-
-- `001_init.sql` — створення таблиць `users`, `events`, `registrations`.
-- `002_add_indexes.sql` — індекси для пошуку, сортування та JOIN.
-
-Таблиця `schema_migrations` не дозволяє застосувати одну й ту саму міграцію двічі.
-
-## Основні endpoint-и
-
-### Users
-
-| Метод | URL | Опис |
-|---|---|---|
-| GET | `/api/users?sort=id&order=ASC&limit=20` | список користувачів |
-| GET | `/api/users/:id` | користувач за id |
-| POST | `/api/users` | створення користувача |
-| PUT | `/api/users/:id` | оновлення користувача |
-| DELETE | `/api/users/:id` | видалення користувача |
-
-### Events
-
-| Метод | URL | Опис |
-|---|---|---|
-| GET | `/api/events` | список подій |
-| GET | `/api/events?category=workshop&sort=createdAt&order=DESC&limit=5` | приклад WHERE + ORDER BY + LIMIT |
-| GET | `/api/events/:id` | подія за id |
-| POST | `/api/events` | створення події |
-| PUT | `/api/events/:id` | оновлення події |
-| DELETE | `/api/events/:id` | видалення події |
-| GET | `/api/events/details/with-authors?category=meeting&sort=author_name&order=ASC&limit=10` | JOIN + фільтри + сортування |
-| GET | `/api/events/search/unsafe?q=test` | демонстраційний небезпечний пошук для SQLi-пояснення |
-
-### Registrations
-
-| Метод | URL | Опис |
-|---|---|---|
-| GET | `/api/registrations` | список реєстрацій |
-| GET | `/api/registrations?status=registered&sort=createdAt&order=DESC&limit=10` | фільтрація + сортування |
-| GET | `/api/registrations/:id` | реєстрація за id |
-| POST | `/api/registrations` | створення реєстрації |
-| PUT | `/api/registrations/:id` | оновлення статусу |
-| DELETE | `/api/registrations/:id` | видалення реєстрації |
-| GET | `/api/registrations/details/all` | JOIN: реєстрації + користувачі + події |
-| GET | `/api/registrations/stats/per-event` | агрегація COUNT/SUM по подіях |
-
-## Формат відповідей
-
-Успішний список:
-
-```json
-{
-  "data": [],
-  "meta": {
-    "count": 0
-  }
-}
-```
-
-Успішний один запис:
-
-```json
-{
-  "data": {
-    "id": 1
-  }
-}
-```
-
-Помилка:
+- API має версію `/api/v1/...`.
+- Залишені старі `/api/...` alias-и для сумісності з перевірками з ЛР 3.
+- CORS налаштовано не через `*`, а через whitelist:
+  - `http://localhost:5173`
+  - `http://127.0.0.1:5173`
+  - `http://localhost:5500`
+  - `http://127.0.0.1:5500`
+- Дозволені методи: `GET, POST, PUT, PATCH, DELETE, OPTIONS`.
+- Дозволені заголовки: `Content-Type, Authorization, X-Demo-UserId`.
+- Є централізований формат помилок:
 
 ```json
 {
   "error": {
-    "message": "Validation failed",
-    "statusCode": 400,
+    "message": "Event not found",
+    "statusCode": 404,
     "details": null
   }
 }
 ```
 
-## HTTP-коди
+### Фронтенд
 
-- `200` — успішне читання або оновлення.
-- `201` — створення запису.
-- `204` — успішне видалення.
-- `400` — некоректні дані, CHECK/NOT NULL/FOREIGN KEY або неправильні query-параметри.
-- `404` — ресурс з таким id не знайдено.
-- `409` — конфлікт унікальності, наприклад дубль email або повторна реєстрація.
-- `500` — неочікувана помилка сервера.
+- Фронтенд написаний на TypeScript у `Frontend/src`.
+- DTO типізовані у `Frontend/src/dtos.ts`.
+- Усі запити йдуть через один API-клієнт `Frontend/src/apiClient.ts`.
+- Є `API_BASE_URL` у `Frontend/src/config.ts`, URL бекенду не розкиданий по коду.
+- Реалізовано стани:
+  - `loading` — завантаження;
+  - `success` — успішно;
+  - `empty` — даних немає;
+  - `error` — помилка.
+- Є клієнтська валідація форми оголошення.
+- Після `POST/PUT/DELETE` UI оновлюється через повторне завантаження даних, тому немає “фантомних” записів.
+- Є блокування кнопок під час запиту та підтвердження видалення.
+- Реалізовано таймаут/скасування запиту через `AbortController`.
 
-## Приклади curl
+## Роути бекенду, які використані на фронтенді
 
-Створити користувача:
+### Health
 
-```bash
-curl -X POST http://localhost:3000/api/users ^
-  -H "Content-Type: application/json" ^
-  -d "{\"name\":\"Test User\",\"email\":\"test@example.com\"}"
-```
+| Метод | URL | Де використано |
+|---|---|---|
+| GET | `/api/v1/health` | Перевірка доступності бекенду при старті сторінки |
 
-Створити оголошення:
+### Users
 
-```bash
-curl -X POST http://localhost:3000/api/events ^
-  -H "Content-Type: application/json" ^
-  -d "{\"title\":\"Нове оголошення\",\"description\":\"Текст оголошення\",\"category\":\"announcement\",\"author_id\":1}"
-```
+| Метод | URL | Де використано |
+|---|---|---|
+| GET | `/api/v1/users` | Таблиця користувачів і select поточного користувача |
+| GET | `/api/v1/users/:id` | Кнопка 👁 у таблиці користувачів |
+| POST | `/api/v1/users` | Окрема форма створення користувача |
+| PUT | `/api/v1/users/:id` | Кнопка редагування користувача |
+| DELETE | `/api/v1/users/:id` | Кнопка видалення користувача |
 
-WHERE + ORDER + LIMIT:
+### Events
 
-```bash
-curl "http://localhost:3000/api/events?category=workshop&sort=createdAt&order=DESC&limit=5"
-```
+| Метод | URL | Де використано |
+|---|---|---|
+| GET | `/api/v1/events` | API-клієнт має функцію списку подій |
+| GET | `/api/v1/events/:id` | Кнопка 👁 у таблиці оголошень |
+| POST | `/api/v1/events` | Форма створення оголошення |
+| PUT | `/api/v1/events/:id` | Редагування оголошення |
+| DELETE | `/api/v1/events/:id` | Видалення оголошення |
+| GET | `/api/v1/events/details/with-authors` | Основна таблиця оголошень з авторами, JOIN |
 
-JOIN:
+### Registrations
 
-```bash
-curl "http://localhost:3000/api/events/details/with-authors?category=meeting&sort=author_name&order=ASC&limit=10"
-```
+| Метод | URL | Де використано |
+|---|---|---|
+| GET | `/api/v1/registrations` | API-клієнт має функцію базового списку |
+| GET | `/api/v1/registrations/:id` | Кнопка 👁 у таблиці реєстрацій |
+| POST | `/api/v1/registrations` | Форма створення реєстрації: у dropdown можна обрати будь-якого створеного користувача |
+| PUT | `/api/v1/registrations/:id` | Кнопка зміни статусу реєстрації |
+| DELETE | `/api/v1/registrations/:id` | Кнопка видалення реєстрації |
+| GET | `/api/v1/registrations/details/all` | Таблиця реєстрацій з користувачами й подіями, JOIN |
+| GET | `/api/v1/registrations/stats/per-event` | Таблиця статистики, агрегація COUNT/SUM |
 
-Агрегація:
+## Сценарії перевірки
 
-```bash
-curl http://localhost:3000/api/registrations/stats/per-event
-```
+### 1. GET / завантаження списку
 
-Перевірка 404:
+1. Запустити `npm run dev:be`.
+2. Запустити `npm run dev:fe`.
+3. Відкрити `http://localhost:5173`.
+4. Має з’явитися таблиця оголошень, користувачів, реєстрацій та статистика.
 
-```bash
-curl http://localhost:3000/api/events/999999
-```
+### 2. POST / створення оголошення
 
-Перевірка 409:
+1. Спочатку створити користувача у блоці “Створити користувача” або обрати вже наявного автора.
+2. Заповнити категорію та текст.
+3. Натиснути “Опублікувати”.
+3. Новий запис має з’явитися в таблиці.
 
-```bash
-curl -X POST http://localhost:3000/api/users ^
-  -H "Content-Type: application/json" ^
-  -d "{\"name\":\"Test User\",\"email\":\"test@example.com\"}"
-```
+### 3. PUT / редагування
 
-## Навчальна демонстрація SQL injection
+1. У полі “Автор / поточний користувач” обрати автора цього оголошення.
+2. Натиснути ✎ біля оголошення.
+3. Змінити текст або категорію.
+4. Натиснути “Зберегти зміни”.
+5. Таблиця має оновитися. Якщо обрати іншого користувача, бекенд поверне 403, бо редагувати можна лише свої події.
 
-У лабораторній №3 параметризовані запити ще не використовуються. Для демонстрації ризику залишено спеціальний endpoint:
+### 4. DELETE / видалення
+
+1. Для оголошення спочатку обрати його автора у полі “Автор / поточний користувач”. Для користувача або реєстрації натиснути 🗑 біля потрібного запису.
+2. Підтвердити видалення.
+3. Запис має зникнути після оновлення списку.
+
+### 5. Помилка 400
+
+Спробувати створити оголошення без тексту. Фронтенд покаже клієнтську помилку. Якщо помилкові дані дійдуть до бекенду, UI покаже відповідь API з кодом `400`.
+
+### 6. Помилка 404
+
+Натиснути 👁 біля запису, а потім видалити його і повторити запит через Postman:
 
 ```text
-GET /api/events/search/unsafe?q=...
+GET http://localhost:3000/api/v1/events/999999
 ```
 
-У ньому `q` навмисно вставляється у SQL через рядкову конкатенацію. Наприклад, “поганий” ввід може змінити логіку `WHERE`:
+Фронтенд/API не має “мовчати”, а має показати зрозумілу помилку.
 
-```text
-' OR '1'='1
-```
+### 7. Мережевий збій
 
-Це зроблено лише для навчального пояснення небезпеки. У звичайних CRUD-запитах рядки екрануються через `sqlText()`, але в реальних проєктах правильне рішення — параметризовані запити, які розглядаються в наступній лабораторній.
+1. Зупинити бекенд.
+2. Натиснути “Оновити” на фронтенді.
+3. UI має показати повідомлення про мережеву/CORS-помилку, а не білий екран.
 
-## Що закриває критерії
+### 8. CORS
+
+Фронтенд відкривається з `http://localhost:5173`, бекенд — з `http://localhost:3000`. Це різні origin, тому CORS налаштовано на бекенді через whitelist.
+
+## Перевірка прав автора
+
+Для `PUT /api/v1/events/:id` і `DELETE /api/v1/events/:id` фронтенд передає заголовок `X-Demo-UserId`. Бекенд порівнює його з `author_id` події. Якщо це не автор, повертається `403 Forbidden`. Це навчальна імітація current user без повної авторизації.
+
+
+## Користувачі та реєстрації
+
+Користувач створюється окремо тільки за іменем. Поле email прибрано з фронтенду та DTO, щоб інтерфейс не вимагав зайві дані від користувача.
+
+У полі “Автор / поточний користувач” обирається автор для створення або редагування оголошення. Це поле використовується для перевірки прав автора події.
+
+У блоці “Реєстрації на події” є окремий dropdown “Користувач”. Через нього на подію може зареєструватися будь-який створений користувач, бо дошка оголошень відкрита для всієї групи. Після створення реєстрації список і статистика оновлюються.
+
+## Контракти DTO і правило “не ламати формат”
+
+1. У версії `/api/v1` не можна перейменовувати або видаляти поля, які вже використовує фронтенд, наприклад `id`, `title`, `description`, `category`, `author_id`.
+2. Нові поля можна додавати лише як необов’язкові або з дефолтним значенням, щоб старий фронтенд їх просто ігнорував.
+3. Якщо треба змінити тип або структуру відповіді, потрібно робити нову версію API, наприклад `/api/v2`.
+
+## Відповідність критеріям
 
 ### Задовільно
 
-- Є SQLite-підключення `src/db/db.ts`.
-- Є запуск міграцій перед стартом сервера `src/server.ts`.
-- Є 3 таблиці, PK, FK, `PRAGMA foreign_keys = ON`.
-- CRUD працює через SQLite, не через фейкові масиви.
-- Є WHERE + ORDER BY + LIMIT.
-- Є 400/404/409/500 через централізований error handler.
+- Frontend читає реальні дані з бекенду через `fetch`.
+- Є `GET list` і `GET by id` для основної сутності.
+- Є CORS для конкретного origin фронтенду.
+- Є loading/success/empty/error.
+- 400/404 показуються користувачу.
+- URL бекенду винесено в `config.ts`.
 
 ### Добре
 
-- Є `schema_migrations` і SQL-міграції.
-- Є індекси для типових фільтрів/JOIN.
-- SQL винесений у repository-шар.
-- Є seed-скрипт.
-- Є JOIN endpoint.
-- Є фільтрація і сортування списків.
+- Є POST, PUT, DELETE через UI.
+- Є єдиний `apiClient`.
+- Є клієнтська валідація.
+- Є узгоджена обробка помилок `{ error: { message, statusCode, details } }`.
+- UI оновлюється після мутацій.
+- Є підтвердження видалення і блокування кнопок під час запиту.
 
 ### Відмінно
 
-- Бекенд написаний на TypeScript.
-- Є міграції `001_init.sql`, `002_add_indexes.sql`.
-- Є опис схеми в README.
-- Є endpoint з агрегацією `COUNT/SUM`.
-- Є JOIN + фільтри + сортування.
-- Є навчальна SQLi-демонстрація.
-- Формат відповідей узгоджений: `{ data, meta }` / `{ error }`.
+- Фронтенд написано на TypeScript.
+- DTO типізовані та використовуються в `apiClient`.
+- Є версійність `/api/v1`.
+- Є правила сумісності DTO.
+- Є `AbortController` для скасування/таймауту.
+- Є сценарії перевірки GET/POST/помилки/CORS у README.
+
+## Збірка
+
+Перевірити TypeScript-компіляцію бекенду й фронтенду:
+
+```bash
+npm run build
+```

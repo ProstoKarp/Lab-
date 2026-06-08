@@ -9,7 +9,6 @@ const router = (0, express_1.Router)();
 const usersRepository = new users_repository_1.UsersRepository();
 const controller = new events_controller_1.EventsController(new events_service_1.EventsService(new events_repository_1.EventsRepository(), usersRepository));
 router.post('/', (req, res, next) => controller.create(req, res, next));
-router.get('/search/unsafe', (req, res, next) => controller.unsafeSearch(req, res, next));
 router.get('/details/with-authors', (req, res, next) => controller.getWithAuthors(req, res, next));
 router.get('/', (req, res, next) => controller.getAll(req, res, next));
 router.get('/:id', (req, res, next) => controller.getById(req, res, next));

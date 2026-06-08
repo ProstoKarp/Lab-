@@ -31,15 +31,6 @@ class EventsController {
             next(e);
         }
     }
-    async unsafeSearch(req, res, next) {
-        try {
-            const events = await this.eventsService.unsafeSearch(req.query.q);
-            res.json({ data: events, meta: { count: events.length, warning: 'Educational SQLi demo: this endpoint intentionally uses unsafe string concatenation.' } });
-        }
-        catch (e) {
-            next(e);
-        }
-    }
     async getById(req, res, next) {
         try {
             res.json({ data: await this.eventsService.getEventById(req.params.id) });
@@ -50,7 +41,7 @@ class EventsController {
     }
     async update(req, res, next) {
         try {
-            res.json({ data: await this.eventsService.updateEvent(req.params.id, req.body) });
+            res.json({ data: await this.eventsService.updateEvent(req.params.id, req.body, req.header('X-Demo-UserId')) });
         }
         catch (e) {
             next(e);
@@ -58,7 +49,7 @@ class EventsController {
     }
     async delete(req, res, next) {
         try {
-            await this.eventsService.deleteEvent(req.params.id);
+            await this.eventsService.deleteEvent(req.params.id, req.header('X-Demo-UserId'));
             res.status(204).send();
         }
         catch (e) {

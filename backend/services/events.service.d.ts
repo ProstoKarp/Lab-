@@ -9,9 +9,9 @@ export declare class EventsService {
     getAllEvents(query: any): Promise<EventRow[]>;
     getEventById(id: unknown): Promise<EventRow>;
     getEventsWithAuthors(query: any): Promise<any[]>;
-    unsafeSearch(q: unknown): Promise<EventRow[]>;
-    updateEvent(id: unknown, dto: UpdateEventDto): Promise<EventRow>;
-    deleteEvent(id: unknown): Promise<void>;
+    updateEvent(id: unknown, dto: UpdateEventDto, currentUserId?: unknown): Promise<EventRow>;
+    deleteEvent(id: unknown, currentUserId?: unknown): Promise<void>;
+    private assertOwner;
     private validateEvent;
 }
 //# sourceMappingURL=events.service.d.ts.map

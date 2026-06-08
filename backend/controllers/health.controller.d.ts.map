@@ -1,1 +1,1 @@
-{"version":3,"file":"health.controller.d.ts","sourceRoot":"","sources":["../../src/controllers/health.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAC5C,qBAAa,gBAAgB;IAC3B,KAAK,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ,GAAG,IAAI;CAGzC"}
+{"version":3,"file":"health.controller.d.ts","sourceRoot":"","sources":["../src/controllers/health.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAC5C,qBAAa,gBAAgB;IAC3B,KAAK,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ,GAAG,IAAI;CAGzC"}

@@ -9,6 +9,5 @@ export declare class UsersService {
     updateUser(id: unknown, dto: UpdateUserDto): Promise<UserRow>;
     deleteUser(id: unknown): Promise<void>;
     private validateName;
-    private validateEmail;
 }
 //# sourceMappingURL=users.service.d.ts.map

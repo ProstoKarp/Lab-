@@ -8,7 +8,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const db_1 = require("./db");
 const sql_1 = require("./sql");
-const migrationsDir = path_1.default.join(process.cwd(), 'src', 'migrations');
+const migrationsDir = path_1.default.join(__dirname, '..', 'src', 'migrations');
 function splitSql(sql) {
     return sql.split(';').map((s) => s.trim()).filter(Boolean);
 }

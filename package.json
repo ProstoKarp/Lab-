@@ -1,14 +1,17 @@
 {
   "name": "board-app",
-  "version": "0.3.0",
-  "description": "Event board application with SQLite, TypeScript, migrations and CRUD",
+  "version": "0.4.0",
+  "description": "Event board application with SQLite backend and integrated TypeScript frontend",
   "main": "Backend/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:be && npm run build:fe",
+    "build:be": "tsc -p tsconfig.json",
+    "build:fe": "tsc -p Frontend/tsconfig.json",
     "start": "node Backend/server.js",
-    "dev": "ts-node src/server.ts",
-    "dev:watch": "ts-node-dev --respawn src/server.ts",
-    "seed": "ts-node src/db/seed.ts"
+    "dev:be": "npm run build:be && node Backend/server.js",
+    "dev:fe": "node scripts/frontend-dev-server.js",
+    "dev": "npm run dev:be",
+    "seed": "npm run build:be && node Backend/db/seed.js"
   },
   "keywords": [],
   "author": "",
