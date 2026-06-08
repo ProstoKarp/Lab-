@@ -27,7 +27,7 @@ function toQuery(params: Record<string, string | number | undefined | null>): st
   return query ? `?${query}` : "";
 }
 
-async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 120000): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 15000): Promise<T> {
   const controller = new AbortController();
   activeControllers.add(controller);
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -38,7 +38,7 @@ async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 1
     const err = e as Error;
     const apiError: ApiErrorDto = {
       status: 0,
-      message: err.name === "AbortError" ? "Запит скасовано вручну або перевищено таймаут 120 секунд" : "Помилка мережі або CORS",
+      message: err.name === "AbortError" ? "Запит скасовано вручну або перевищено таймаут 15 секунд" : "Помилка мережі або CORS",
       details: err.message
     };
     throw apiError;
@@ -72,7 +72,7 @@ export function cancelActiveRequest(): void {
 }
 export const unwrap = <T>(response: ApiResponse<T>): T => response.data;
 
-function withUserHeader(method: "POST" | "PUT" | "DELETE", currentUserId: number, body?: unknown): RequestInit {
+function withUserHeader(method: "GET" | "POST" | "PUT" | "DELETE", currentUserId: number, body?: unknown): RequestInit {
   const headers: Record<string, string> = { "X-Demo-UserId": String(currentUserId) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   return { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined };
@@ -90,15 +90,15 @@ export const api = {
   events: {
     list: (params: { category?: string; sort?: string; order?: string; limit?: number } = {}) => request<ApiResponse<EventDto[]>>(`/events${toQuery({ limit: 50, ...params })}`),
     detailsWithAuthors: (params: { category?: string; sort?: string; order?: string; limit?: number } = {}) => request<ApiResponse<EventWithAuthorDto[]>>(`/events/details/with-authors${toQuery({ limit: 50, ...params })}`),
-    getById: (id: number) => request<ApiResponse<EventDto>>(`/events/${encodeURIComponent(id)}`),
-    create: (dto: CreateEventDto) => request<ApiResponse<EventDto>>("/events", json("POST", dto)),
+    getById: (id: number, currentUserId: number) => request<ApiResponse<EventDto>>(`/events/${encodeURIComponent(id)}`, withUserHeader("GET", currentUserId)),
+    create: (dto: CreateEventDto, currentUserId: number) => request<ApiResponse<EventDto>>("/events", withUserHeader("POST", currentUserId, dto)),
     update: (id: number, dto: UpdateEventDto, currentUserId: number) => request<ApiResponse<EventDto>>(`/events/${encodeURIComponent(id)}`, withUserHeader("PUT", currentUserId, dto)),
     remove: (id: number, currentUserId: number) => request<null>(`/events/${encodeURIComponent(id)}`, withUserHeader("DELETE", currentUserId))
   },
   registrations: {
     list: () => request<ApiResponse<RegistrationDto[]>>("/registrations?sort=createdAt&order=DESC&limit=100"),
     detailsAll: () => request<ApiResponse<RegistrationWithDetailsDto[]>>("/registrations/details/all?sort=createdAt&order=DESC&limit=100"),
-    getById: (id: number) => request<ApiResponse<RegistrationDto>>(`/registrations/${encodeURIComponent(id)}`),
+    getById: (id: number, currentUserId: number) => request<ApiResponse<RegistrationDto>>(`/registrations/${encodeURIComponent(id)}`, withUserHeader("GET", currentUserId)),
     create: (dto: CreateRegistrationDto, currentUserId: number) => request<ApiResponse<RegistrationDto>>("/registrations", withUserHeader("POST", currentUserId, dto)),
     update: (id: number, dto: UpdateRegistrationDto, currentUserId: number) => request<ApiResponse<RegistrationDto>>(`/registrations/${encodeURIComponent(id)}`, withUserHeader("PUT", currentUserId, dto)),
     remove: (id: number, currentUserId: number) => request<null>(`/registrations/${encodeURIComponent(id)}`, withUserHeader("DELETE", currentUserId)),

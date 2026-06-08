@@ -1,0 +1,38 @@
+### Health + headers
+GET http://localhost:3000/api/v1/health
+
+### SQLi regression: value must be treated as text, not SQL code
+GET http://localhost:3000/api/v1/events?q=' OR '1'='1&sort=createdAt&order=DESC&limit=5
+
+### IDOR: no current user -> 401
+GET http://localhost:3000/api/v1/events/1
+
+### IDOR: wrong user -> 403 if event belongs to another author
+PUT http://localhost:3000/api/v1/events/1
+Content-Type: application/json
+X-Demo-UserId: 2
+
+{
+  "description": "Спроба чужого редагування"
+}
+
+### Legitimate update: use owner id in X-Demo-UserId
+PUT http://localhost:3000/api/v1/events/1
+Content-Type: application/json
+X-Demo-UserId: 1
+
+{
+  "description": "Легітимне оновлення автором"
+}
+
+### XSS regression: text must render as text in UI
+POST http://localhost:3000/api/v1/events
+Content-Type: application/json
+X-Demo-UserId: 1
+
+{
+  "title": "XSS перевірка",
+  "description": "<b>перевірка</b>",
+  "category": "announcement",
+  "author_id": 1
+}

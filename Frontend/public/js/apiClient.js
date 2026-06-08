@@ -9,7 +9,7 @@ function toQuery(params) {
     const query = search.toString();
     return query ? `?${query}` : "";
 }
-async function request(path, options = {}, timeoutMs = 120000) {
+async function request(path, options = {}, timeoutMs = 15000) {
     const controller = new AbortController();
     activeControllers.add(controller);
     const timer = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -21,7 +21,7 @@ async function request(path, options = {}, timeoutMs = 120000) {
         const err = e;
         const apiError = {
             status: 0,
-            message: err.name === "AbortError" ? "Запит скасовано вручну або перевищено таймаут 120 секунд" : "Помилка мережі або CORS",
+            message: err.name === "AbortError" ? "Запит скасовано вручну або перевищено таймаут 15 секунд" : "Помилка мережі або CORS",
             details: err.message
         };
         throw apiError;
@@ -76,15 +76,15 @@ export const api = {
     events: {
         list: (params = {}) => request(`/events${toQuery({ limit: 50, ...params })}`),
         detailsWithAuthors: (params = {}) => request(`/events/details/with-authors${toQuery({ limit: 50, ...params })}`),
-        getById: (id) => request(`/events/${encodeURIComponent(id)}`),
-        create: (dto) => request("/events", json("POST", dto)),
+        getById: (id, currentUserId) => request(`/events/${encodeURIComponent(id)}`, withUserHeader("GET", currentUserId)),
+        create: (dto, currentUserId) => request("/events", withUserHeader("POST", currentUserId, dto)),
         update: (id, dto, currentUserId) => request(`/events/${encodeURIComponent(id)}`, withUserHeader("PUT", currentUserId, dto)),
         remove: (id, currentUserId) => request(`/events/${encodeURIComponent(id)}`, withUserHeader("DELETE", currentUserId))
     },
     registrations: {
         list: () => request("/registrations?sort=createdAt&order=DESC&limit=100"),
         detailsAll: () => request("/registrations/details/all?sort=createdAt&order=DESC&limit=100"),
-        getById: (id) => request(`/registrations/${encodeURIComponent(id)}`),
+        getById: (id, currentUserId) => request(`/registrations/${encodeURIComponent(id)}`, withUserHeader("GET", currentUserId)),
         create: (dto, currentUserId) => request("/registrations", withUserHeader("POST", currentUserId, dto)),
         update: (id, dto, currentUserId) => request(`/registrations/${encodeURIComponent(id)}`, withUserHeader("PUT", currentUserId, dto)),
         remove: (id, currentUserId) => request(`/registrations/${encodeURIComponent(id)}`, withUserHeader("DELETE", currentUserId)),

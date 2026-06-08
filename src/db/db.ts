@@ -6,6 +6,8 @@ const dataDir = path.join(process.cwd(), 'data');
 const dbPath = path.join(dataDir, 'app.db');
 let db: sqlite3.Database | null = null;
 
+type SqlParam = string | number | null;
+
 export function getDB(): sqlite3.Database {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   if (!db) {
@@ -20,27 +22,38 @@ export function getDB(): sqlite3.Database {
   }
   return db;
 }
-export function dbRun(sql: string): Promise<{ lastID: number; changes: number }> {
-  if (process.env.NODE_ENV !== 'production') console.log('[SQL]', sql.trim().replace(/\s+/g, ' '));
+
+function logSql(sql: string, params: SqlParam[] = []): void {
+  if (process.env.NODE_ENV !== 'production') {
+    const compact = sql.trim().replace(/\s+/g, ' ');
+    console.log('[SQL]', compact, params.length ? JSON.stringify(params) : '');
+  }
+}
+
+export function dbRun(sql: string, params: SqlParam[] = []): Promise<{ lastID: number; changes: number }> {
+  logSql(sql, params);
   return new Promise((resolve, reject) => {
-    getDB().run(sql, function (err) {
+    getDB().run(sql, params, function (err) {
       if (err) reject(err);
       else resolve({ lastID: this.lastID, changes: this.changes });
     });
   });
 }
-export function dbGet<T = any>(sql: string): Promise<T | undefined> {
-  if (process.env.NODE_ENV !== 'production') console.log('[SQL]', sql.trim().replace(/\s+/g, ' '));
+
+export function dbGet<T = any>(sql: string, params: SqlParam[] = []): Promise<T | undefined> {
+  logSql(sql, params);
   return new Promise((resolve, reject) => {
-    getDB().get(sql, (err, row) => err ? reject(err) : resolve(row as T | undefined));
+    getDB().get(sql, params, (err, row) => err ? reject(err) : resolve(row as T | undefined));
   });
 }
-export function dbAll<T = any>(sql: string): Promise<T[]> {
-  if (process.env.NODE_ENV !== 'production') console.log('[SQL]', sql.trim().replace(/\s+/g, ' '));
+
+export function dbAll<T = any>(sql: string, params: SqlParam[] = []): Promise<T[]> {
+  logSql(sql, params);
   return new Promise((resolve, reject) => {
-    getDB().all(sql, (err, rows) => err ? reject(err) : resolve((rows || []) as T[]));
+    getDB().all(sql, params, (err, rows) => err ? reject(err) : resolve((rows || []) as T[]));
   });
 }
+
 export function closeDB(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!db) return resolve();

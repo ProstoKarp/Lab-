@@ -21,6 +21,10 @@ export class App {
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(LoggerMiddleware.log);
     this.app.use((req, res, next) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
       const origin = req.headers.origin;
       if (!origin || allowedOrigins.has(origin)) {
         if (origin) res.header('Access-Control-Allow-Origin', origin);
@@ -50,7 +54,7 @@ export class App {
     this.app.use('/api/events', eventsRoutes);
     this.app.use('/api/registrations', registrationsRoutes);
 
-    this.app.get('/', (req, res) => res.json({ data: { message: 'Board Application API', version: '0.4.0', api: '/api/v1' } }));
+    this.app.get('/', (req, res) => res.json({ data: { message: 'Board Application API', version: '1.0.0', api: '/api/v1' } }));
     this.app.use((req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found', statusCode: 404, details: req.originalUrl } }));
     this.app.use(ErrorHandlerMiddleware.handle);
   }

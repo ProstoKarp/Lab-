@@ -7,8 +7,9 @@ const categories: EventCategory[] = ['announcement', 'meeting', 'workshop', 'con
 
 export class EventsService {
   constructor(private eventsRepository: EventsRepository, private usersRepository: UsersRepository) {}
-  async createEvent(dto: CreateEventDto): Promise<EventRow> {
+  async createEvent(dto: CreateEventDto, currentUserId?: unknown): Promise<EventRow> {
     this.validateEvent(dto);
+    this.assertSameUser(dto.author_id, currentUserId, 'create events only as yourself');
     const author = await this.usersRepository.findById(dto.author_id);
     if (!author) throw ApiError.badRequest('Author user not found');
     return this.eventsRepository.create(dto.title.trim().slice(0, 120), dto.description.trim(), dto.category, dto.author_id);
@@ -16,7 +17,13 @@ export class EventsService {
   async getAllEvents(query: any): Promise<EventRow[]> {
     return this.eventsRepository.findAll(query);
   }
-  async getEventById(id: unknown): Promise<EventRow> {
+  async getEventById(id: unknown, currentUserId?: unknown): Promise<EventRow> {
+    const event = await this.eventsRepository.findById(id);
+    if (!event) throw ApiError.notFound('Event not found');
+    this.assertOwner(event, currentUserId);
+    return event;
+  }
+  async getPublicEventById(id: unknown): Promise<EventRow> {
     const event = await this.eventsRepository.findById(id);
     if (!event) throw ApiError.notFound('Event not found');
     return event;
@@ -26,7 +33,7 @@ export class EventsService {
   }
 
   async updateEvent(id: unknown, dto: UpdateEventDto, currentUserId?: unknown): Promise<EventRow> {
-    const current = await this.getEventById(id);
+    const current = await this.getPublicEventById(id);
     this.assertOwner(current, currentUserId);
     const updates: UpdateEventDto = {};
     if (dto.title !== undefined) {
@@ -46,18 +53,17 @@ export class EventsService {
     return updated;
   }
   async deleteEvent(id: unknown, currentUserId?: unknown): Promise<void> {
-    const current = await this.getEventById(id);
+    const current = await this.getPublicEventById(id);
     this.assertOwner(current, currentUserId);
     const ok = await this.eventsRepository.delete(id);
     if (!ok) throw ApiError.notFound('Event not found');
   }
+  private assertSameUser(resourceUserId: unknown, currentUserId: unknown, action: string): void {
+    if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) throw ApiError.unauthorized('X-Demo-UserId header is required');
+    if (Number(currentUserId) !== Number(resourceUserId)) throw ApiError.forbidden(`You can ${action}`);
+  }
   private assertOwner(event: EventRow, currentUserId?: unknown): void {
-    if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) {
-      throw ApiError.badRequest('X-Demo-UserId header is required for editing or deleting events');
-    }
-    if (Number(currentUserId) !== Number(event.author_id)) {
-      throw ApiError.forbidden('You can edit or delete only your own events');
-    }
+    this.assertSameUser(event.author_id, currentUserId, 'read, edit or delete only your own events');
   }
   private validateEvent(dto: CreateEventDto): void {
     if (!dto || typeof dto !== 'object') throw ApiError.badRequest('Request body is required');

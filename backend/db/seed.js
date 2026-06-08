@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const db_1 = require("./db");
 const migrations_1 = require("./migrations");
-const sql_1 = require("./sql");
 async function seed() {
     try {
         await (0, migrations_1.runMigrations)();
@@ -15,7 +14,7 @@ async function seed() {
             { name: 'Софія Мельник', email: 'sofiia@example.com' }
         ];
         for (const u of users)
-            await (0, db_1.dbRun)(`INSERT OR IGNORE INTO users (name, email) VALUES (${(0, sql_1.sqlText)(u.name)}, ${(0, sql_1.sqlText)(u.email)});`);
+            await (0, db_1.dbRun)('INSERT OR IGNORE INTO users (name, email) VALUES (?, ?);', [u.name, u.email]);
         const events = [
             { title: 'Зустріч групи', description: 'Організаційна зустріч щодо навчальних планів', category: 'meeting', author_id: 1 },
             { title: 'Оголошення про дедлайн', description: 'Нагадування про дедлайн здачі лабораторної роботи', category: 'announcement', author_id: 2 },
@@ -24,8 +23,7 @@ async function seed() {
             { title: 'Дозвілля після пар', description: 'Неформальна зустріч групи після занять', category: 'meeting', author_id: 4 }
         ];
         for (const e of events) {
-            await (0, db_1.dbRun)(`INSERT OR IGNORE INTO events (title, description, category, author_id)
-        VALUES (${(0, sql_1.sqlText)(e.title)}, ${(0, sql_1.sqlText)(e.description)}, ${(0, sql_1.sqlText)(e.category)}, ${e.author_id});`);
+            await (0, db_1.dbRun)('INSERT OR IGNORE INTO events (title, description, category, author_id) VALUES (?, ?, ?, ?);', [e.title, e.description, e.category, e.author_id]);
         }
         const regs = [
             { user_id: 1, event_id: 1, status: 'registered' }, { user_id: 2, event_id: 1, status: 'attended' },
@@ -34,7 +32,7 @@ async function seed() {
             { user_id: 3, event_id: 4, status: 'registered' }, { user_id: 5, event_id: 5, status: 'registered' }
         ];
         for (const r of regs) {
-            await (0, db_1.dbRun)(`INSERT OR IGNORE INTO registrations (user_id, event_id, status) VALUES (${r.user_id}, ${r.event_id}, ${(0, sql_1.sqlText)(r.status)});`);
+            await (0, db_1.dbRun)('INSERT OR IGNORE INTO registrations (user_id, event_id, status) VALUES (?, ?, ?);', [r.user_id, r.event_id, r.status]);
         }
         console.log('Seed completed');
     }

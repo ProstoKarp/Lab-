@@ -29,11 +29,16 @@ function getDB() {
     }
     return db;
 }
-function dbRun(sql) {
-    if (process.env.NODE_ENV !== 'production')
-        console.log('[SQL]', sql.trim().replace(/\s+/g, ' '));
+function logSql(sql, params = []) {
+    if (process.env.NODE_ENV !== 'production') {
+        const compact = sql.trim().replace(/\s+/g, ' ');
+        console.log('[SQL]', compact, params.length ? JSON.stringify(params) : '');
+    }
+}
+function dbRun(sql, params = []) {
+    logSql(sql, params);
     return new Promise((resolve, reject) => {
-        getDB().run(sql, function (err) {
+        getDB().run(sql, params, function (err) {
             if (err)
                 reject(err);
             else
@@ -41,18 +46,16 @@ function dbRun(sql) {
         });
     });
 }
-function dbGet(sql) {
-    if (process.env.NODE_ENV !== 'production')
-        console.log('[SQL]', sql.trim().replace(/\s+/g, ' '));
+function dbGet(sql, params = []) {
+    logSql(sql, params);
     return new Promise((resolve, reject) => {
-        getDB().get(sql, (err, row) => err ? reject(err) : resolve(row));
+        getDB().get(sql, params, (err, row) => err ? reject(err) : resolve(row));
     });
 }
-function dbAll(sql) {
-    if (process.env.NODE_ENV !== 'production')
-        console.log('[SQL]', sql.trim().replace(/\s+/g, ' '));
+function dbAll(sql, params = []) {
+    logSql(sql, params);
     return new Promise((resolve, reject) => {
-        getDB().all(sql, (err, rows) => err ? reject(err) : resolve((rows || [])));
+        getDB().all(sql, params, (err, rows) => err ? reject(err) : resolve((rows || [])));
     });
 }
 function closeDB() {

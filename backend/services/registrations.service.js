@@ -26,10 +26,12 @@ class RegistrationsService {
     async getAllRegistrations(query) {
         return this.registrationsRepository.findAll(query);
     }
-    async getRegistrationById(id) {
+    async getRegistrationById(id, currentUserId) {
         const registration = await this.registrationsRepository.findById(id);
         if (!registration)
             throw ApiError_1.ApiError.notFound('Registration not found');
+        if (currentUserId !== undefined)
+            this.assertCurrentUser(registration.user_id, currentUserId, 'read');
         return registration;
     }
     async updateRegistration(id, dto, currentUserId) {
@@ -66,7 +68,7 @@ class RegistrationsService {
     }
     assertCurrentUser(userId, currentUserId, action) {
         if (!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0) {
-            throw ApiError_1.ApiError.badRequest('X-Demo-UserId header is required for registration actions');
+            throw ApiError_1.ApiError.unauthorized('X-Demo-UserId header is required for registration actions');
         }
         if (Number(currentUserId) !== Number(userId)) {
             throw ApiError_1.ApiError.forbidden(`You can ${action} only your own registrations`);

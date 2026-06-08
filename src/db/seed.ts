@@ -1,6 +1,5 @@
 import { closeDB, dbRun } from './db';
 import { runMigrations } from './migrations';
-import { sqlText } from './sql';
 
 async function seed(): Promise<void> {
   try {
@@ -13,7 +12,7 @@ async function seed(): Promise<void> {
       { name: 'Олег Шевченко', email: 'oleh@example.com' },
       { name: 'Софія Мельник', email: 'sofiia@example.com' }
     ];
-    for (const u of users) await dbRun(`INSERT OR IGNORE INTO users (name, email) VALUES (${sqlText(u.name)}, ${sqlText(u.email)});`);
+    for (const u of users) await dbRun('INSERT OR IGNORE INTO users (name, email) VALUES (?, ?);', [u.name, u.email]);
     const events = [
       { title: 'Зустріч групи', description: 'Організаційна зустріч щодо навчальних планів', category: 'meeting', author_id: 1 },
       { title: 'Оголошення про дедлайн', description: 'Нагадування про дедлайн здачі лабораторної роботи', category: 'announcement', author_id: 2 },
@@ -22,8 +21,7 @@ async function seed(): Promise<void> {
       { title: 'Дозвілля після пар', description: 'Неформальна зустріч групи після занять', category: 'meeting', author_id: 4 }
     ];
     for (const e of events) {
-      await dbRun(`INSERT OR IGNORE INTO events (title, description, category, author_id)
-        VALUES (${sqlText(e.title)}, ${sqlText(e.description)}, ${sqlText(e.category)}, ${e.author_id});`);
+      await dbRun('INSERT OR IGNORE INTO events (title, description, category, author_id) VALUES (?, ?, ?, ?);', [e.title, e.description, e.category, e.author_id]);
     }
     const regs = [
       { user_id: 1, event_id: 1, status: 'registered' }, { user_id: 2, event_id: 1, status: 'attended' },
@@ -32,7 +30,7 @@ async function seed(): Promise<void> {
       { user_id: 3, event_id: 4, status: 'registered' }, { user_id: 5, event_id: 5, status: 'registered' }
     ];
     for (const r of regs) {
-      await dbRun(`INSERT OR IGNORE INTO registrations (user_id, event_id, status) VALUES (${r.user_id}, ${r.event_id}, ${sqlText(r.status)});`);
+      await dbRun('INSERT OR IGNORE INTO registrations (user_id, event_id, status) VALUES (?, ?, ?);', [r.user_id, r.event_id, r.status]);
     }
     console.log('Seed completed');
   } finally {

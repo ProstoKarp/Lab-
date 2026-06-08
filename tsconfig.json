@@ -1,12 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "nodenext",
-    "lib": [
-      "ES2020"
-    ],
+    "module": "commonjs",
+    "lib": ["ES2020"],
     "outDir": "Backend",
-    "rootDir": "Backend/src",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,13 +19,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "nodenext"
+    "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "Backend/src/**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

@@ -168,7 +168,7 @@ async function onEventSubmit(e: Event): Promise<void> {
       await api.events.update(state.editingEventId, { title: dto.title, description: dto.description, category: dto.category }, authorId);
       showNotice("Оголошення оновлено.");
     } else {
-      await api.events.create(dto);
+      await api.events.create(dto, authorId);
       showNotice("Оголошення створено.");
     }
     resetForm();
@@ -254,7 +254,7 @@ function onRegistrationsTableClick(e: Event): void {
 
 async function showEventDetails(id: number): Promise<void> {
   try {
-    const event = unwrap(await api.events.getById(id));
+    const event = unwrap(await api.events.getById(id, Number(authorInput.value)));
     showNotice(`Деталі події #${event.id}: ${event.title} / ${categoryLabel(event.category)}.`);
   } catch (e) { showApiError("Не вдалося отримати деталі події", e); }
 }
@@ -268,7 +268,9 @@ async function showUserDetails(id: number): Promise<void> {
 
 async function showRegistrationDetails(id: number): Promise<void> {
   try {
-    const registration = unwrap(await api.registrations.getById(id));
+    const registrationState = state.registrations.find((x) => x.id === id);
+    if (!registrationState) return;
+    const registration = unwrap(await api.registrations.getById(id, registrationState.user_id));
     showNotice(`Реєстрація #${registration.id}: user_id=${registration.user_id}, event_id=${registration.event_id}, status=${registration.status}.`);
   } catch (e) { showApiError("Не вдалося отримати реєстрацію", e); }
 }
@@ -351,85 +353,117 @@ function resetForm(): void {
 }
 
 function renderEvents(): void {
-  tableBody.innerHTML = "";
+  tableBody.replaceChildren();
   const currentUserId = Number(authorInput.value);
   for (const item of state.events) {
     const isOwner = currentUserId === Number(item.author_id);
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(item.author_name || "Анонім")}</td>
-      <td>${escapeHtml(categoryLabel(item.category))}</td>
-      <td>${escapeHtml(item.description)}</td>
-      <td>${formatDate(item.createdAt)}</td>
-      <td>
-        <button type="button" data-action="details" data-id="${item.id}">👁</button>
-        <button type="button" class="edit-btn" data-action="edit" data-id="${item.id}" ${isOwner ? "" : "disabled title=\"Редагувати може лише автор\""}>✎</button>
-        <button type="button" class="delete-btn" data-action="delete" data-id="${item.id}" ${isOwner ? "" : "disabled title=\"Видалити може лише автор\""}>🗑</button>
-      </td>`;
+    appendCell(tr, item.author_name || "Анонім");
+    appendCell(tr, categoryLabel(item.category));
+    appendCell(tr, item.description);
+    appendCell(tr, formatDate(item.createdAt));
+    const actions = document.createElement("td");
+    actions.append(
+      actionButton("👁", "details", item.id, "", !isOwner, "Деталі через /events/:id доступні лише автору"),
+      actionButton("✎", "edit", item.id, "edit-btn", !isOwner, "Редагувати може лише автор"),
+      actionButton("🗑", "delete", item.id, "delete-btn", !isOwner, "Видалити може лише автор")
+    );
+    tr.appendChild(actions);
     tableBody.appendChild(tr);
   }
 }
 
 function renderUsers(): void {
-  usersTableBody.innerHTML = "";
+  usersTableBody.replaceChildren();
   for (const user of state.users) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${user.id}</td>
-      <td>${escapeHtml(user.name)}</td>
-      <td>
-        <button type="button" data-action="details" data-id="${user.id}">👁</button>
-        <button type="button" class="edit-btn" data-action="edit" data-id="${user.id}">✎</button>
-        <button type="button" class="delete-btn" data-action="delete" data-id="${user.id}">🗑</button>
-      </td>`;
+    appendCell(tr, String(user.id));
+    appendCell(tr, user.name);
+    const actions = document.createElement("td");
+    actions.append(
+      actionButton("👁", "details", user.id),
+      actionButton("✎", "edit", user.id, "edit-btn"),
+      actionButton("🗑", "delete", user.id, "delete-btn")
+    );
+    tr.appendChild(actions);
     usersTableBody.appendChild(tr);
   }
 }
 
 function renderRegistrations(): void {
-  registrationsTableBody.innerHTML = "";
+  registrationsTableBody.replaceChildren();
   for (const registration of state.registrations) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${registration.id}</td>
-      <td>${escapeHtml(registration.user_name)}</td>
-      <td>${escapeHtml(registration.event_title)}</td>
-      <td>${escapeHtml(statusLabel(registration.status))}</td>
-      <td>
-        <button type="button" data-action="details" data-id="${registration.id}">👁</button>
-        <button type="button" class="edit-btn" data-action="status" data-id="${registration.id}">Статус</button>
-        <button type="button" class="delete-btn" data-action="delete" data-id="${registration.id}">🗑</button>
-      </td>`;
+    appendCell(tr, String(registration.id));
+    appendCell(tr, registration.user_name);
+    appendCell(tr, registration.event_title);
+    appendCell(tr, statusLabel(registration.status));
+    const actions = document.createElement("td");
+    actions.append(
+      actionButton("👁", "details", registration.id),
+      actionButton("Статус", "status", registration.id, "edit-btn"),
+      actionButton("🗑", "delete", registration.id, "delete-btn")
+    );
+    tr.appendChild(actions);
     registrationsTableBody.appendChild(tr);
   }
 }
 
 function renderStats(): void {
-  statsTableBody.innerHTML = "";
+  statsTableBody.replaceChildren();
   for (const row of state.stats) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(row.event_title)}</td>
-      <td>${Number(row.total_registrations || 0)}</td>
-      <td>${Number(row.registered || 0)}</td>
-      <td>${Number(row.attended || 0)}</td>
-      <td>${Number(row.cancelled || 0)}</td>`;
+    appendCell(tr, row.event_title);
+    appendCell(tr, String(Number(row.total_registrations || 0)));
+    appendCell(tr, String(Number(row.registered || 0)));
+    appendCell(tr, String(Number(row.attended || 0)));
+    appendCell(tr, String(Number(row.cancelled || 0)));
     statsTableBody.appendChild(tr);
   }
 }
 
 function fillSelects(): void {
   const selectedAuthor = authorInput.value;
-  authorInput.innerHTML = state.users.length
-    ? state.users.map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")
-    : `<option value="">Спочатку створіть користувача</option>`;
+  fillSelect(authorInput, state.users.map((u) => ({ value: String(u.id), label: u.name })), "Спочатку створіть користувача");
   if (selectedAuthor && state.users.some((u) => String(u.id) === selectedAuthor)) authorInput.value = selectedAuthor;
-  registrationUser.innerHTML = state.users.length
-    ? state.users.map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")
-    : `<option value="">Спочатку створіть користувача</option>`;
-  registrationEvent.innerHTML = state.events.length
-    ? state.events.map((e) => `<option value="${e.id}">${escapeHtml(e.title)}</option>`).join("")
-    : `<option value="">Немає подій</option>`;
+  fillSelect(registrationUser, state.users.map((u) => ({ value: String(u.id), label: u.name })), "Спочатку створіть користувача");
+  fillSelect(registrationEvent, state.events.map((e) => ({ value: String(e.id), label: e.title })), "Немає подій");
+}
+
+function appendCell(row: HTMLTableRowElement, text: string): HTMLTableCellElement {
+  const td = document.createElement("td");
+  td.textContent = text;
+  row.appendChild(td);
+  return td;
+}
+
+function actionButton(label: string, action: string, id: number, className = "", disabled = false, title = ""): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.action = action;
+  button.dataset.id = String(id);
+  button.textContent = label;
+  if (className) button.className = className;
+  if (disabled) button.disabled = true;
+  if (title) button.title = title;
+  return button;
+}
+
+function fillSelect(select: HTMLSelectElement, options: Array<{ value: string; label: string }>, emptyLabel: string): void {
+  select.replaceChildren();
+  if (!options.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = emptyLabel;
+    select.appendChild(option);
+    return;
+  }
+  for (const item of options) {
+    const option = document.createElement("option");
+    option.value = item.value;
+    option.textContent = item.label;
+    select.appendChild(option);
+  }
 }
 
 function validateEventForm(): boolean {
@@ -492,11 +526,3 @@ function formatDate(value: string): string {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("uk-UA") : "—";
 }
 
-function escapeHtml(str: string): string {
-  return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}

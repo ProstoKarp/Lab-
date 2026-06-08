@@ -5,12 +5,14 @@ export declare class EventsService {
     private eventsRepository;
     private usersRepository;
     constructor(eventsRepository: EventsRepository, usersRepository: UsersRepository);
-    createEvent(dto: CreateEventDto): Promise<EventRow>;
+    createEvent(dto: CreateEventDto, currentUserId?: unknown): Promise<EventRow>;
     getAllEvents(query: any): Promise<EventRow[]>;
-    getEventById(id: unknown): Promise<EventRow>;
+    getEventById(id: unknown, currentUserId?: unknown): Promise<EventRow>;
+    getPublicEventById(id: unknown): Promise<EventRow>;
     getEventsWithAuthors(query: any): Promise<any[]>;
     updateEvent(id: unknown, dto: UpdateEventDto, currentUserId?: unknown): Promise<EventRow>;
     deleteEvent(id: unknown, currentUserId?: unknown): Promise<void>;
+    private assertSameUser;
     private assertOwner;
     private validateEvent;
 }

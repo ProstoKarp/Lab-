@@ -7,8 +7,7 @@ exports.runMigrations = runMigrations;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const db_1 = require("./db");
-const sql_1 = require("./sql");
-const migrationsDir = path_1.default.join(__dirname, '..', 'src', 'migrations');
+const migrationsDir = path_1.default.join(process.cwd(), 'src', 'migrations');
 function splitSql(sql) {
     return sql.split(';').map((s) => s.trim()).filter(Boolean);
 }
@@ -35,7 +34,7 @@ async function runMigrations() {
         const statements = splitSql(fs_1.default.readFileSync(fullPath, 'utf8'));
         for (const statement of statements)
             await (0, db_1.dbRun)(statement);
-        await (0, db_1.dbRun)(`INSERT INTO schema_migrations (name) VALUES (${(0, sql_1.sqlText)(file)});`);
+        await (0, db_1.dbRun)('INSERT INTO schema_migrations (name) VALUES (?);', [file]);
         console.log(`Migration applied: ${file}`);
     }
     console.log('DB schema initialized');

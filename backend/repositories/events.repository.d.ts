@@ -11,6 +11,7 @@ export declare class EventsRepository {
     create(title: string, description: string, category: string, author_id: unknown): Promise<EventRow>;
     findAll(filters?: EventFilters): Promise<EventRow[]>;
     findById(id: unknown): Promise<EventRow | null>;
+    findOwnedById(id: unknown, ownerId: unknown): Promise<EventRow | null>;
     findWithAuthor(filters?: EventFilters): Promise<any[]>;
     update(id: unknown, updates: Partial<{
         title: string;

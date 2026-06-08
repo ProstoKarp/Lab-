@@ -1,10 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { dbAll, dbRun } from './db';
-import { sqlText } from './sql';
 
 type MigrationRow = { name: string };
-const migrationsDir = path.join(__dirname, '..', 'src', 'migrations');
+const migrationsDir = path.join(process.cwd(), 'src', 'migrations');
 
 function splitSql(sql: string): string[] {
   return sql.split(';').map((s) => s.trim()).filter(Boolean);
@@ -31,7 +30,7 @@ export async function runMigrations(): Promise<void> {
     const fullPath = path.join(migrationsDir, file);
     const statements = splitSql(fs.readFileSync(fullPath, 'utf8'));
     for (const statement of statements) await dbRun(statement);
-    await dbRun(`INSERT INTO schema_migrations (name) VALUES (${sqlText(file)});`);
+    await dbRun('INSERT INTO schema_migrations (name) VALUES (?);', [file]);
     console.log(`Migration applied: ${file}`);
   }
   console.log('DB schema initialized');

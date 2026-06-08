@@ -1,15 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sqlText = sqlText;
 exports.sqlNumber = sqlNumber;
 exports.sqlLimit = sqlLimit;
 exports.sqlOrder = sqlOrder;
 exports.pickSort = pickSort;
-function sqlText(value) {
-    if (value === null || value === undefined)
-        return 'NULL';
-    return `'${String(value).replace(/'/g, "''")}'`;
-}
 function sqlNumber(value, field = 'id') {
     const n = Number(value);
     if (!Number.isInteger(n) || n <= 0)

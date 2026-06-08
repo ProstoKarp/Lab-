@@ -1,7 +1,3 @@
-export function sqlText(value: unknown): string {
-  if (value === null || value === undefined) return 'NULL';
-  return `'${String(value).replace(/'/g, "''")}'`;
-}
 export function sqlNumber(value: unknown, field = 'id'): number {
   const n = Number(value);
   if (!Number.isInteger(n) || n <= 0) throw new Error(`${field} must be a positive integer`);

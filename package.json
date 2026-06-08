@@ -1,7 +1,7 @@
 {
   "name": "board-app",
-  "version": "0.4.0",
-  "description": "Event board application with SQLite backend and integrated TypeScript frontend",
+  "version": "1.0.0",
+  "description": "Lab 0.4.0 updated with Lab 1.0.0 security functionality according to Lab 05 requirements",
   "main": "Backend/server.js",
   "scripts": {
     "build": "npm run build:be && npm run build:fe",

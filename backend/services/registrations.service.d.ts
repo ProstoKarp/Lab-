@@ -9,7 +9,7 @@ export declare class RegistrationsService {
     constructor(registrationsRepository: RegistrationsRepository, eventsRepository: EventsRepository, usersRepository: UsersRepository);
     registerUserForEvent(dto: CreateRegistrationDto, currentUserId?: unknown): Promise<RegistrationRow>;
     getAllRegistrations(query: any): Promise<RegistrationRow[]>;
-    getRegistrationById(id: unknown): Promise<RegistrationRow>;
+    getRegistrationById(id: unknown, currentUserId?: unknown): Promise<RegistrationRow>;
     updateRegistration(id: unknown, dto: UpdateRegistrationDto, currentUserId?: unknown): Promise<RegistrationRow>;
     deleteRegistration(id: unknown, currentUserId?: unknown): Promise<void>;
     getAllRegistrationsWithDetails(query: any): Promise<any[]>;

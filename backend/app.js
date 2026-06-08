@@ -24,6 +24,10 @@ class App {
         this.app.use(express_1.default.urlencoded({ extended: true }));
         this.app.use(logger_middleware_1.LoggerMiddleware.log);
         this.app.use((req, res, next) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('Referrer-Policy', 'no-referrer');
+            res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
             const origin = req.headers.origin;
             if (!origin || allowedOrigins.has(origin)) {
                 if (origin)
@@ -51,7 +55,7 @@ class App {
         this.app.use('/api/users', users_routes_1.default);
         this.app.use('/api/events', events_routes_1.default);
         this.app.use('/api/registrations', registrations_routes_1.default);
-        this.app.get('/', (req, res) => res.json({ data: { message: 'Board Application API', version: '0.4.0', api: '/api/v1' } }));
+        this.app.get('/', (req, res) => res.json({ data: { message: 'Board Application API', version: '1.0.0', api: '/api/v1' } }));
         this.app.use((req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found', statusCode: 404, details: req.originalUrl } }));
         this.app.use(error_handler_middleware_1.ErrorHandlerMiddleware.handle);
     }
